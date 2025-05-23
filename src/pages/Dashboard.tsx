@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,7 @@ type Property = {
   address: string;
   city: string;
   province: string;
-  monthly_rent: string;
+  monthly_rent: number;
   status: 'occupied' | 'vacant';
   tenant?: string;
   leaseEnd?: string;
@@ -137,7 +136,7 @@ const Dashboard = () => {
         // These fields would be populated from lease information in a real scenario
         tenant: 'TBD',
         leaseEnd: 'TBD',
-      }));
+      })) as Property[];
 
       setProperties(formattedProperties);
     } catch (error) {
@@ -164,7 +163,7 @@ const Dashboard = () => {
         province: prop.province,
         monthly_rent: prop.monthly_rent,
         status: 'vacant' as 'vacant',
-      }));
+      })) as Property[];
 
       setProperties(formattedProperties);
     } catch (error) {
