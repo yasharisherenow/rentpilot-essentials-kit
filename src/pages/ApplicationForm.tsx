@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,17 +6,33 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+
+type Property = {
+  id: string;
+  title: string;
+  address: string;
+  city: string;
+  province: string;
+  postal_code: string;
+};
 
 const ApplicationForm = () => {
   const navigate = useNavigate();
+  const { propertyId } = useParams();
+  const { user, profile } = useAuth();
   const [submitted, setSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [property, setProperty] = useState<Property | null>(null);
+  
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
+    firstName: profile?.first_name || '',
+    lastName: profile?.last_name || '',
+    email: profile?.email || '',
+    phone: profile?.phone || '',
     dateOfBirth: '',
     currentAddress: '',
     currentCity: '',
@@ -42,6 +57,49 @@ const ApplicationForm = () => {
     consent: false
   });
 
+  useEffect(() => {
+    // If we have a propertyId, fetch the property details
+    if (propertyId) {
+      fetchProperty(propertyId);
+    }
+    
+    // Pre-fill form with user data if available
+    if (profile) {
+      setFormData(prev => ({
+        ...prev,
+        firstName: profile.first_name || prev.firstName,
+        lastName: profile.last_name || prev.lastName,
+        email: profile.email || prev.email,
+        phone: profile.phone || prev.phone,
+      }));
+    }
+  }, [propertyId, profile]);
+
+  const fetchProperty = async (id: string) => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, title, address, city, province, postal_code')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch property details',
+          variant: 'destructive',
+        });
+      } else if (data) {
+        setProperty(data);
+      }
+    } catch (error) {
+      console.error('Error fetching property:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -55,8 +113,9 @@ const ApplicationForm = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!formData.consent) {
       toast({
         title: "Consent Required",
@@ -66,21 +125,89 @@ const ApplicationForm = () => {
       return;
     }
 
-    // In a real app, you would submit the form data to your backend here
-    console.log('Form submitted:', formData);
-    
-    // Show success message
-    toast({
-      title: "Application Submitted",
-      description: "Your rental application has been submitted successfully.",
-    });
-    
-    setSubmitted(true);
-    
-    // Redirect to dashboard after a short delay (simulating a successful submission)
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 2000);
+    if (!propertyId) {
+      toast({
+        title: "No Property Selected",
+        description: "Please select a property to apply for.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: "Not Authenticated",
+        description: "You must be logged in to submit an application.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      const applicationData = {
+        property_id: propertyId,
+        tenant_id: user.id,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        date_of_birth: formData.dateOfBirth,
+        current_address: formData.currentAddress,
+        current_city: formData.currentCity,
+        current_province: formData.currentProvince,
+        current_postal_code: formData.currentPostalCode,
+        employment_status: formData.employmentStatus,
+        current_employer: formData.currentEmployer,
+        monthly_income: formData.monthlyIncome ? parseFloat(formData.monthlyIncome) : null,
+        employment_length: formData.employmentLength,
+        emergency_contact_name: formData.emergencyContactName,
+        emergency_contact_phone: formData.emergencyContactPhone,
+        emergency_contact_relation: formData.emergencyContactRelation,
+        reference_name: formData.referenceName,
+        reference_phone: formData.referencePhone,
+        reference_relation: formData.referenceRelation,
+        has_been_evicted: formData.hasBeenEvicted,
+        has_pets: formData.hasPets,
+        pet_details: formData.hasPets ? formData.petDetails : null,
+        number_of_occupants: parseInt(formData.numberOfOccupants),
+        move_in_date: formData.moveInDate,
+        additional_comments: formData.additionalComments,
+        status: 'pending'
+      };
+
+      const { error } = await supabase
+        .from('applications')
+        .insert([applicationData]);
+
+      if (error) {
+        throw error;
+      }
+      
+      // Show success message
+      toast({
+        title: "Application Submitted",
+        description: "Your rental application has been submitted successfully.",
+      });
+      
+      setSubmitted(true);
+      
+      // Redirect to dashboard after a short delay
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('Error submitting application:', error);
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Failed to submit your application. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (submitted) {
@@ -103,6 +230,11 @@ const ApplicationForm = () => {
       <div className="max-w-3xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold mb-2">Rental Application Form</h1>
+          {property && (
+            <div className="mb-2">
+              <span className="font-semibold">Applying for:</span> {property.title || property.address}, {property.city}, {property.province}
+            </div>
+          )}
           <p className="text-gray-600">Please fill out all required fields to apply for this rental property.</p>
         </div>
         
@@ -479,7 +611,13 @@ const ApplicationForm = () => {
           </div>
           
           <div className="pt-4">
-            <Button type="submit" className="w-full bg-rentpilot-600 hover:bg-rentpilot-700">Submit Application</Button>
+            <Button 
+              type="submit" 
+              className="w-full bg-rentpilot-600 hover:bg-rentpilot-700"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Submitting...' : 'Submit Application'}
+            </Button>
           </div>
         </form>
       </div>
