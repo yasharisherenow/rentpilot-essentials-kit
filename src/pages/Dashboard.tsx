@@ -20,6 +20,9 @@ type Property = {
   status: 'occupied' | 'vacant';
   tenant?: string;
   leaseEnd?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  is_available: boolean;
 };
 
 type Application = {
@@ -29,6 +32,8 @@ type Application = {
   property_id: string;
   date: string;
   status: 'pending' | 'approved' | 'rejected';
+  email: string;
+  phone: string;
 };
 
 type Document = {
@@ -36,6 +41,8 @@ type Document = {
   name: string;
   date: string;
   type: string;
+  property_title?: string;
+  tenant_name?: string;
 };
 
 type Reminder = {
@@ -77,6 +84,7 @@ const Dashboard = () => {
           await Promise.all([
             fetchAvailableProperties(),
             fetchTenantApplications(),
+            fetchTenantLeases(),
           ]);
         }
         
@@ -136,6 +144,9 @@ const Dashboard = () => {
         // These fields would be populated from lease information in a real scenario
         tenant: 'TBD',
         leaseEnd: 'TBD',
+        bedrooms: prop.bedrooms,
+        bathrooms: prop.bathrooms,
+        is_available: prop.is_available,
       })) as Property[];
 
       setProperties(formattedProperties);
@@ -163,6 +174,9 @@ const Dashboard = () => {
         province: prop.province,
         monthly_rent: prop.monthly_rent,
         status: 'vacant' as 'vacant',
+        bedrooms: prop.bedrooms,
+        bathrooms: prop.bathrooms,
+        is_available: prop.is_available,
       })) as Property[];
 
       setProperties(formattedProperties);
@@ -176,8 +190,20 @@ const Dashboard = () => {
     if (!user) return;
 
     try {
-      // This query would need to join the applications table with properties
-      // and profiles to get all the necessary information
+      const { data: propertyData, error: propError } = await supabase
+        .from('properties')
+        .select('id')
+        .eq('landlord_id', user.id);
+
+      if (propError) throw propError;
+
+      if (!propertyData || propertyData.length === 0) {
+        setApplications([]);
+        return;
+      }
+
+      const propertyIds = propertyData.map(p => p.id);
+
       const { data, error } = await supabase
         .from('applications')
         .select(`
@@ -185,11 +211,13 @@ const Dashboard = () => {
           property_id,
           first_name,
           last_name,
+          email,
+          phone,
           created_at,
           status,
           properties:property_id (title, address)
         `)
-        .eq('properties.landlord_id', user.id);
+        .in('property_id', propertyIds);
 
       if (error) throw error;
 
@@ -200,11 +228,13 @@ const Dashboard = () => {
         property_id: app.property_id,
         date: app.created_at,
         status: app.status as 'pending' | 'approved' | 'rejected',
+        email: app.email,
+        phone: app.phone,
       }));
 
       setApplications(formattedApplications);
     } catch (error) {
-      console.error("Error fetching applications:", error);
+      console.error("Error fetching applications for landlord:", error);
     }
   };
 
@@ -220,6 +250,8 @@ const Dashboard = () => {
           property_id,
           created_at,
           status,
+          email,
+          phone,
           properties:property_id (title, address)
         `)
         .eq('tenant_id', user.id);
@@ -233,6 +265,8 @@ const Dashboard = () => {
         property_id: app.property_id,
         date: app.created_at,
         status: app.status as 'pending' | 'approved' | 'rejected',
+        email: app.email,
+        phone: app.phone,
       }));
 
       setApplications(formattedApplications);
@@ -246,31 +280,46 @@ const Dashboard = () => {
     if (!user || !profile) return;
 
     try {
-      const { data, error } = await supabase
-        .from('leases')
-        .select(`
-          id,
-          property_id,
-          created_at,
-          tenant_name,
-          status,
-          properties:property_id (title, address)
-        `)
-        .eq(profile.role === 'landlord' ? 'landlord_id' : 'tenant_id', user.id);
+      let query = supabase.from('leases').select(`
+        id,
+        property_id,
+        created_at,
+        tenant_name,
+        status,
+        monthly_rent,
+        lease_start_date,
+        lease_end_date,
+        properties:property_id (title, address)
+      `);
+
+      if (profile.role === 'landlord') {
+        query = query.eq('landlord_id', user.id);
+      } else {
+        query = query.eq('tenant_id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
       const formattedDocuments = data.map((lease) => ({
         id: lease.id,
-        name: `Lease - ${lease.properties?.title || lease.properties?.address} - ${lease.tenant_name}`,
+        name: `Lease Agreement - ${lease.properties?.title || lease.properties?.address}`,
         date: lease.created_at,
         type: 'lease',
+        property_title: lease.properties?.title || lease.properties?.address,
+        tenant_name: lease.tenant_name,
       }));
 
       setDocuments(formattedDocuments);
     } catch (error) {
       console.error("Error fetching lease documents:", error);
     }
+  };
+
+  // Fetch tenant leases
+  const fetchTenantLeases = async () => {
+    fetchLeaseDocuments();
   };
 
   // Format date for display
@@ -400,6 +449,13 @@ const Dashboard = () => {
                         <div className="mb-2 md:mb-0">
                           <div className="font-medium">{property.title || property.address}</div>
                           <div className="text-sm text-gray-500">{property.city}, {property.province}</div>
+                          {(property.bedrooms || property.bathrooms) && (
+                            <div className="text-xs text-gray-400">
+                              {property.bedrooms && `${property.bedrooms} bed`}
+                              {property.bedrooms && property.bathrooms && ' • '}
+                              {property.bathrooms && `${property.bathrooms} bath`}
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-col md:items-end">
                           <Badge className={property.status === 'occupied' ? 'bg-green-500' : 'bg-amber-500'}>
@@ -589,6 +645,16 @@ const Dashboard = () => {
                           {property.status === 'occupied' ? 'Occupied' : 'Vacant'}
                         </Badge>
                       </div>
+                      {(property.bedrooms || property.bathrooms) && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Details:</span>
+                          <span>
+                            {property.bedrooms && `${property.bedrooms} bed`}
+                            {property.bedrooms && property.bathrooms && ' • '}
+                            {property.bathrooms && `${property.bathrooms} bath`}
+                          </span>
+                        </div>
+                      )}
                       {property.status === 'occupied' && profile?.role === 'landlord' && (
                         <>
                           <div className="flex justify-between">
@@ -661,15 +727,16 @@ const Dashboard = () => {
           
           {applications.length > 0 ? (
             <div className="bg-white rounded-lg shadow">
-              <div className="hidden md:grid md:grid-cols-4 gap-4 p-4 border-b text-sm font-medium text-gray-500">
+              <div className="hidden md:grid md:grid-cols-5 gap-4 p-4 border-b text-sm font-medium text-gray-500">
                 <div>Applicant</div>
                 <div>Property</div>
+                <div>Contact</div>
                 <div>Date</div>
                 <div>Status</div>
               </div>
               <div className="divide-y">
                 {applications.map(application => (
-                  <div key={application.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 hover:bg-gray-50">
+                  <div key={application.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 hover:bg-gray-50">
                     <div>
                       <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Applicant</div>
                       {application.applicant}
@@ -677,6 +744,13 @@ const Dashboard = () => {
                     <div>
                       <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Property</div>
                       {application.property}
+                    </div>
+                    <div>
+                      <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Contact</div>
+                      <div className="text-sm">
+                        <div>{application.email}</div>
+                        <div className="text-gray-500">{application.phone}</div>
+                      </div>
                     </div>
                     <div>
                       <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Date</div>
@@ -753,7 +827,12 @@ const Dashboard = () => {
                     <div className="md:col-span-2 flex items-center">
                       <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Document</div>
                       <FileText className="mr-2 text-rentpilot-600" size={20} />
-                      {document.name}
+                      <div>
+                        <div className="font-medium">{document.name}</div>
+                        {document.tenant_name && (
+                          <div className="text-sm text-gray-500">Tenant: {document.tenant_name}</div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Date</div>
