@@ -9,6 +9,8 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import AddPropertyForm from '@/components/AddPropertyForm';
+import CreateLeaseForm from '@/components/CreateLeaseForm';
 
 type Property = {
   id: string;
@@ -331,6 +333,20 @@ const Dashboard = () => {
     }
   };
 
+  // Refresh data after property added
+  const handlePropertyAdded = () => {
+    if (profile?.role === 'landlord') {
+      fetchProperties();
+    }
+  };
+
+  // Refresh data after lease created
+  const handleLeaseCreated = () => {
+    if (profile?.role === 'landlord') {
+      fetchLeaseDocuments();
+    }
+  };
+
   // Render loading state
   if (isLoading) {
     return (
@@ -464,6 +480,16 @@ const Dashboard = () => {
                           <div className="text-sm text-gray-500 mt-1">
                             ${property.monthly_rent} /mo
                           </div>
+                          {profile?.role === 'landlord' && (
+                            <div className="mt-2">
+                              <CreateLeaseForm
+                                propertyId={property.id}
+                                propertyTitle={property.title || property.address}
+                                defaultRent={property.monthly_rent}
+                                onLeaseCreated={handleLeaseCreated}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -543,7 +569,7 @@ const Dashboard = () => {
                   <Home className="mx-auto text-rentpilot-600" size={32} />
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full bg-rentpilot-600 hover:bg-rentpilot-700">Add Property</Button>
+                  <AddPropertyForm onPropertyAdded={handlePropertyAdded} />
                 </CardFooter>
               </Card>
             )}
@@ -622,10 +648,7 @@ const Dashboard = () => {
               {profile?.role === 'landlord' ? 'Your Properties' : 'Available Properties'}
             </h2>
             {profile?.role === 'landlord' && (
-              <Button className="bg-rentpilot-600 hover:bg-rentpilot-700">
-                <PlusCircle className="mr-2" size={16} />
-                Add Property
-              </Button>
+              <AddPropertyForm onPropertyAdded={handlePropertyAdded} />
             )}
           </div>
           
@@ -676,9 +699,12 @@ const Dashboard = () => {
                   <CardFooter className="flex justify-between border-t pt-4">
                     <Button variant="outline" size="sm">View Details</Button>
                     {profile?.role === 'landlord' ? (
-                      <Button variant="outline" size="sm">
-                        {property.status === 'occupied' ? 'Manage Tenant' : 'Create Listing'}
-                      </Button>
+                      <CreateLeaseForm
+                        propertyId={property.id}
+                        propertyTitle={property.title || property.address}
+                        defaultRent={property.monthly_rent}
+                        onLeaseCreated={handleLeaseCreated}
+                      />
                     ) : (
                       <Button 
                         variant="outline" 
@@ -701,7 +727,7 @@ const Dashboard = () => {
               {profile?.role === 'landlord' ? (
                 <>
                   <p className="text-gray-500 mb-4">Start by adding your first property</p>
-                  <Button className="bg-rentpilot-600 hover:bg-rentpilot-700">Add Property</Button>
+                  <AddPropertyForm onPropertyAdded={handlePropertyAdded} />
                 </>
               ) : (
                 <p className="text-gray-500 mb-4">No properties are available at this time. Check back later.</p>
