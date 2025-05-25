@@ -126,9 +126,48 @@ export type Database = {
           },
         ]
       }
+      lease_tenants: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          lease_id: string
+          tenant_email: string | null
+          tenant_name: string
+          tenant_phone: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          lease_id: string
+          tenant_email?: string | null
+          tenant_name: string
+          tenant_phone?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          lease_id?: string
+          tenant_email?: string | null
+          tenant_name?: string
+          tenant_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lease_tenants_lease_id_fkey"
+            columns: ["lease_id"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leases: {
         Row: {
           created_at: string
+          has_pets: boolean | null
           id: string
           landlord_id: string
           lease_end_date: string
@@ -136,7 +175,9 @@ export type Database = {
           monthly_rent: number
           pet_deposit: number | null
           property_id: string
+          reminder_settings: Json | null
           security_deposit: number
+          snow_grass_responsibility: string | null
           special_terms: string | null
           status: string
           tenant_id: string | null
@@ -146,6 +187,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          has_pets?: boolean | null
           id?: string
           landlord_id: string
           lease_end_date: string
@@ -153,7 +195,9 @@ export type Database = {
           monthly_rent: number
           pet_deposit?: number | null
           property_id: string
+          reminder_settings?: Json | null
           security_deposit: number
+          snow_grass_responsibility?: string | null
           special_terms?: string | null
           status?: string
           tenant_id?: string | null
@@ -163,6 +207,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          has_pets?: boolean | null
           id?: string
           landlord_id?: string
           lease_end_date?: string
@@ -170,7 +215,9 @@ export type Database = {
           monthly_rent?: number
           pet_deposit?: number | null
           property_id?: string
+          reminder_settings?: Json | null
           security_deposit?: number
+          snow_grass_responsibility?: string | null
           special_terms?: string | null
           status?: string
           tenant_id?: string | null
@@ -204,6 +251,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_created_at: string | null
           created_at: string
           email: string
           first_name: string | null
@@ -211,9 +259,11 @@ export type Database = {
           last_name: string | null
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
+          subscription_plan: string | null
           updated_at: string
         }
         Insert: {
+          account_created_at?: string | null
           created_at?: string
           email: string
           first_name?: string | null
@@ -221,9 +271,11 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          subscription_plan?: string | null
           updated_at?: string
         }
         Update: {
+          account_created_at?: string | null
           created_at?: string
           email?: string
           first_name?: string | null
@@ -231,6 +283,7 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          subscription_plan?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -254,6 +307,7 @@ export type Database = {
           province: string
           square_feet: number | null
           title: string
+          unit_count: number | null
           updated_at: string
         }
         Insert: {
@@ -274,6 +328,7 @@ export type Database = {
           province: string
           square_feet?: number | null
           title: string
+          unit_count?: number | null
           updated_at?: string
         }
         Update: {
@@ -294,6 +349,7 @@ export type Database = {
           province?: string
           square_feet?: number | null
           title?: string
+          unit_count?: number | null
           updated_at?: string
         }
         Relationships: [

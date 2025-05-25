@@ -11,6 +11,8 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import AddPropertyForm from '@/components/AddPropertyForm';
 import CreateLeaseForm from '@/components/CreateLeaseForm';
+import EditPropertyForm from '@/components/EditPropertyForm';
+import AccountManagement from '@/components/AccountManagement';
 
 type Property = {
   id: string;
@@ -25,6 +27,7 @@ type Property = {
   bedrooms?: number;
   bathrooms?: number;
   is_available: boolean;
+  unit_count?: number;
 };
 
 type Application = {
@@ -149,6 +152,7 @@ const Dashboard = () => {
         bedrooms: prop.bedrooms,
         bathrooms: prop.bathrooms,
         is_available: prop.is_available,
+        unit_count: prop.unit_count,
       })) as Property[];
 
       setProperties(formattedProperties);
@@ -481,7 +485,11 @@ const Dashboard = () => {
                             ${property.monthly_rent} /mo
                           </div>
                           {profile?.role === 'landlord' && (
-                            <div className="mt-2">
+                            <div className="mt-2 flex gap-2">
+                              <EditPropertyForm
+                                property={property}
+                                onPropertyUpdated={handlePropertyAdded}
+                              />
                               <CreateLeaseForm
                                 propertyId={property.id}
                                 propertyTitle={property.title || property.address}
@@ -636,7 +644,7 @@ const Dashboard = () => {
                 <User className="mx-auto text-rentpilot-600" size={32} />
               </CardContent>
               <CardFooter>
-                <Button className="w-full">Manage Account</Button>
+                <AccountManagement />
               </CardFooter>
             </Card>
           </div>
@@ -678,6 +686,12 @@ const Dashboard = () => {
                           </span>
                         </div>
                       )}
+                      {property.unit_count && property.unit_count > 1 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Units:</span>
+                          <span>{property.unit_count}</span>
+                        </div>
+                      )}
                       {property.status === 'occupied' && profile?.role === 'landlord' && (
                         <>
                           <div className="flex justify-between">
@@ -699,12 +713,18 @@ const Dashboard = () => {
                   <CardFooter className="flex justify-between border-t pt-4">
                     <Button variant="outline" size="sm">View Details</Button>
                     {profile?.role === 'landlord' ? (
-                      <CreateLeaseForm
-                        propertyId={property.id}
-                        propertyTitle={property.title || property.address}
-                        defaultRent={property.monthly_rent}
-                        onLeaseCreated={handleLeaseCreated}
-                      />
+                      <div className="flex gap-2">
+                        <EditPropertyForm
+                          property={property}
+                          onPropertyUpdated={handlePropertyAdded}
+                        />
+                        <CreateLeaseForm
+                          propertyId={property.id}
+                          propertyTitle={property.title || property.address}
+                          defaultRent={property.monthly_rent}
+                          onLeaseCreated={handleLeaseCreated}
+                        />
+                      </div>
                     ) : (
                       <Button 
                         variant="outline" 
