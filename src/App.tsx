@@ -10,6 +10,8 @@ import NotFound from "./pages/NotFound";
 import ApplicationForm from "./pages/ApplicationForm";
 import LeaseForm from "./pages/LeaseForm";
 import Dashboard from "./pages/Dashboard";
+import LandlordDashboard from "./pages/LandlordDashboard";
+import TenantDashboard from "./pages/TenantDashboard";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
@@ -18,6 +20,7 @@ import Pricing from "./pages/Pricing";
 import Layout from "./components/Layout";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RoleBasedRoute from "./components/RoleBasedRoute";
 
 const App = () => {
   // Create QueryClient inside the component to avoid hook issues
@@ -62,6 +65,26 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
+              
+              {/* Role-based dashboard routes */}
+              <Route 
+                path="/dashboard/landlord" 
+                element={
+                  <RoleBasedRoute allowedRoles={['landlord']}>
+                    <Layout><LandlordDashboard /></Layout>
+                  </RoleBasedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/tenant" 
+                element={
+                  <RoleBasedRoute allowedRoles={['tenant']}>
+                    <Layout><TenantDashboard /></Layout>
+                  </RoleBasedRoute>
+                } 
+              />
+              
+              {/* Legacy dashboard route - redirect based on role */}
               <Route 
                 path="/dashboard" 
                 element={
@@ -70,6 +93,7 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

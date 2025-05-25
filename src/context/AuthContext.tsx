@@ -89,6 +89,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const redirectBasedOnRole = (role: 'landlord' | 'tenant') => {
+    if (role === 'landlord') {
+      navigate('/dashboard/landlord');
+    } else {
+      navigate('/dashboard/tenant');
+    }
+  };
+
   const signUp = async (
     email: string, 
     password: string, 
@@ -116,7 +124,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: 'Please check your email for verification link.',
       });
       
-      navigate('/dashboard');
+      // Redirect based on role
+      redirectBasedOnRole(userData.role);
     } catch (error: any) {
       toast({
         title: 'Sign up failed',
@@ -142,7 +151,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: 'Signed in successfully',
       });
       
-      navigate('/dashboard');
+      // Wait for profile to be fetched, then redirect
+      setTimeout(() => {
+        // Get the current profile to determine redirect
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user?.id)
+          .single()
+          .then(({ data }) => {
+            if (data?.role) {
+              redirectBasedOnRole(data.role);
+            } else {
+              navigate('/dashboard');
+            }
+          });
+      }, 100);
     } catch (error: any) {
       toast({
         title: 'Sign in failed',
