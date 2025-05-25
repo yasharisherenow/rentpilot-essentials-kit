@@ -20,6 +20,7 @@ type Property = {
   address: string;
   city: string;
   province: string;
+  postal_code: string;
   monthly_rent: number;
   status: 'occupied' | 'vacant';
   tenant?: string;
@@ -137,13 +138,14 @@ const Dashboard = () => {
 
       if (error) throw error;
 
-      // Transform data to match the expected format
+      // Transform data to match the expected format with all required properties
       const formattedProperties = data.map((prop) => ({
         id: prop.id,
         title: prop.title,
         address: prop.address,
         city: prop.city,
         province: prop.province,
+        postal_code: prop.postal_code, // Include required postal_code
         monthly_rent: prop.monthly_rent,
         status: prop.is_available ? 'vacant' : 'occupied',
         // These fields would be populated from lease information in a real scenario
@@ -178,6 +180,7 @@ const Dashboard = () => {
         address: prop.address,
         city: prop.city,
         province: prop.province,
+        postal_code: prop.postal_code, // Include required postal_code
         monthly_rent: prop.monthly_rent,
         status: 'vacant' as 'vacant',
         bedrooms: prop.bedrooms,

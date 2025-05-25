@@ -101,22 +101,26 @@ const AccountManagement = () => {
     setIsDeleting(true);
     try {
       // Delete user's data first (due to foreign key constraints)
-      await supabase.from('lease_tenants').delete().eq('lease_id', 
-        supabase.from('leases').select('id').eq('landlord_id', user.id)
-      );
+      const { data: userLeases } = await supabase
+        .from('leases')
+        .select('id')
+        .eq('landlord_id', user.id);
+
+      if (userLeases && userLeases.length > 0) {
+        const leaseIds = userLeases.map(lease => lease.id);
+        await supabase.from('lease_tenants').delete().in('lease_id', leaseIds);
+      }
       
       await supabase.from('leases').delete().eq('landlord_id', user.id);
       await supabase.from('applications').delete().eq('tenant_id', user.id);
       await supabase.from('properties').delete().eq('landlord_id', user.id);
       await supabase.from('profiles').delete().eq('id', user.id);
 
-      // Delete auth user
-      const { error } = await supabase.auth.admin.deleteUser(user.id);
-      if (error) throw error;
-
+      // Delete auth user - Note: This requires admin privileges in production
+      // In a real app, this would be handled by a server-side function
       toast({
-        title: "Account Deleted",
-        description: "Your account has been permanently deleted",
+        title: "Account Deletion",
+        description: "Your account data has been deleted. Please contact support to complete account deletion.",
       });
 
       signOut();
@@ -152,10 +156,10 @@ const AccountManagement = () => {
           {/* Subscription Info */}
           <div className="space-y-2">
             <h3 className="font-medium">Current Subscription</h3>
-            {getSubscriptionBadge(profile?.subscription_plan || 'free')}
-            {profile?.account_created_at && (
+            {getSubscriptionBadge((profile as any)?.subscription_plan || 'free')}
+            {(profile as any)?.account_created_at && (
               <p className="text-sm text-gray-500">
-                Member since {new Date(profile.account_created_at).toLocaleDateString()}
+                Member since {new Date((profile as any).account_created_at).toLocaleDateString()}
               </p>
             )}
           </div>
