@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,54 +14,151 @@ import {
   Plus,
   Search
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-
-type Document = {
-  id: string;
-  name: string;
-  type: 'pdf' | 'image' | 'other';
-  size: number;
-  property_title?: string;
-  category: 'lease' | 'receipt' | 'inspection' | 'other';
-  uploaded_at: string;
-  url: string;
-};
+import { documentService, Document, DocumentCategory } from '@/services/documentService';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 type DocumentManagerProps = {
-  documents: Document[];
-  onUpload: (files: FileList, propertyId?: string) => void;
-  onDelete: (documentId: string) => void;
-  onPreview: (documentId: string) => void;
-  onDownload: (documentId: string) => void;
-  storageUsed: number; // in MB
-  storageLimit: number; // in MB
+  onDocumentUploaded?: () => void;
 };
 
-const DocumentManager = ({ 
-  documents, 
-  onUpload, 
-  onDelete, 
-  onPreview, 
-  onDownload,
-  storageUsed,
-  storageLimit
-}: DocumentManagerProps) => {
+const DocumentManager = ({ onDocumentUploaded }: DocumentManagerProps) => {
+  const { user } = useAuth();
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'lease' | 'receipt' | 'inspection' | 'other'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | DocumentCategory>('all');
+  const [storageUsed, setStorageUsed] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
-  const getFileIcon = (type: Document['type']) => {
-    switch (type) {
-      case 'pdf':
-        return <FileText className="text-red-500" size={20} />;
-      case 'image':
-        return <ImageIcon className="text-blue-500" size={20} />;
-      default:
-        return <FileText className="text-gray-500" size={20} />;
+  const storageLimit = 10240; // 10GB in MB
+
+  useEffect(() => {
+    if (user) {
+      loadDocuments();
+      loadStorageUsage();
+    }
+  }, [user]);
+
+  const loadDocuments = async () => {
+    try {
+      setIsLoading(true);
+      const docs = await documentService.getDocuments();
+      setDocuments(docs);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getCategoryBadge = (category: Document['category']) => {
+  const loadStorageUsage = async () => {
+    try {
+      const usage = await documentService.getStorageUsage();
+      setStorageUsed(usage);
+    } catch (error) {
+      console.error('Error loading storage usage:', error);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    setUploading(true);
+    
+    try {
+      for (const file of Array.from(files)) {
+        // Basic file validation
+        if (file.size > 50 * 1024 * 1024) { // 50MB limit per file
+          toast({
+            title: "File too large",
+            description: `${file.name} exceeds 50MB limit`,
+            variant: "destructive",
+          });
+          continue;
+        }
+
+        // Determine category based on file type
+        let category: DocumentCategory = 'other';
+        if (file.type.includes('pdf') && file.name.toLowerCase().includes('lease')) {
+          category = 'lease';
+        } else if (file.name.toLowerCase().includes('receipt')) {
+          category = 'receipt';
+        } else if (file.name.toLowerCase().includes('inspection')) {
+          category = 'inspection';
+        }
+
+        await documentService.uploadDocument(file, category);
+      }
+
+      await loadDocuments();
+      await loadStorageUsage();
+      onDocumentUploaded?.();
+    } catch (error) {
+      console.error('Error uploading files:', error);
+    } finally {
+      setUploading(false);
+      // Reset file input
+      e.target.value = '';
+    }
+  };
+
+  const handleDelete = async (documentId: string) => {
+    const success = await documentService.deleteDocument(documentId);
+    if (success) {
+      await loadDocuments();
+      await loadStorageUsage();
+    }
+  };
+
+  const handlePreview = async (document: Document) => {
+    try {
+      const url = await documentService.getDocumentUrl(document.file_path);
+      if (url) {
+        window.open(url, '_blank');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to preview document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownload = async (document: Document) => {
+    try {
+      const url = await documentService.getDocumentUrl(document.file_path);
+      if (url) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = document.original_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.includes('pdf')) {
+      return <FileText className="text-red-500" size={20} />;
+    } else if (mimeType.includes('image')) {
+      return <ImageIcon className="text-blue-500" size={20} />;
+    }
+    return <FileText className="text-gray-500" size={20} />;
+  };
+
+  const getCategoryBadge = (category: DocumentCategory) => {
     const categoryConfig = {
       lease: { color: 'bg-green-100 text-green-700', label: 'Lease' },
       receipt: { color: 'bg-blue-100 text-blue-700', label: 'Receipt' },
@@ -92,19 +188,27 @@ const DocumentManager = ({
 
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (doc.property_title?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+                         doc.original_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || doc.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
   const storagePercentage = (storageUsed / storageLimit) * 100;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      onUpload(files);
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -121,12 +225,17 @@ const DocumentManager = ({
             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
             onChange={handleFileUpload}
             className="hidden"
+            disabled={uploading}
           />
           <label htmlFor="file-upload">
-            <Button className="bg-[#0C6E5F] hover:bg-[#0C6E5F]/90" asChild>
+            <Button 
+              className="bg-[#0C6E5F] hover:bg-[#0C6E5F]/90" 
+              asChild
+              disabled={uploading}
+            >
               <span className="flex items-center gap-2 cursor-pointer">
                 <Upload size={16} />
-                Upload Documents
+                {uploading ? 'Uploading...' : 'Upload Documents'}
               </span>
             </Button>
           </label>
@@ -191,17 +300,17 @@ const DocumentManager = ({
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  {getFileIcon(document.type)}
+                  {getFileIcon(document.mime_type)}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">{document.name}</h4>
-                    <p className="text-xs text-gray-500">{formatFileSize(document.size)}</p>
+                    <p className="text-xs text-gray-500">{formatFileSize(document.file_size)}</p>
                   </div>
                 </div>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onPreview(document.id)}
+                    onClick={() => handlePreview(document)}
                     className="p-1 h-auto"
                   >
                     <Eye size={12} />
@@ -209,7 +318,7 @@ const DocumentManager = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onDownload(document.id)}
+                    onClick={() => handleDownload(document)}
                     className="p-1 h-auto"
                   >
                     <Download size={12} />
@@ -217,7 +326,7 @@ const DocumentManager = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onDelete(document.id)}
+                    onClick={() => handleDelete(document.id)}
                     className="p-1 h-auto text-red-500 hover:text-red-700"
                   >
                     <Trash2 size={12} />
@@ -230,13 +339,6 @@ const DocumentManager = ({
                   {getCategoryBadge(document.category)}
                   <span className="text-xs text-gray-500">{formatDate(document.uploaded_at)}</span>
                 </div>
-                
-                {document.property_title && (
-                  <div className="flex items-center gap-1 text-xs text-gray-600">
-                    <FolderOpen size={10} />
-                    <span className="truncate">{document.property_title}</span>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -256,7 +358,7 @@ const DocumentManager = ({
             </p>
             {!searchTerm && categoryFilter === 'all' && (
               <label htmlFor="file-upload">
-                <Button variant="outline" className="cursor-pointer">
+                <Button variant="outline" className="cursor-pointer" disabled={uploading}>
                   <Plus size={16} className="mr-2" />
                   Upload Documents
                 </Button>

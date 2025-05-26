@@ -126,6 +126,56 @@ export type Database = {
           },
         ]
       }
+      documents: {
+        Row: {
+          category: string
+          file_path: string
+          file_size: number
+          id: string
+          mime_type: string
+          name: string
+          original_name: string
+          property_id: string | null
+          updated_at: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          file_path: string
+          file_size: number
+          id?: string
+          mime_type: string
+          name: string
+          original_name: string
+          property_id?: string | null
+          updated_at?: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          name?: string
+          original_name?: string
+          property_id?: string | null
+          updated_at?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lease_tenants: {
         Row: {
           created_at: string | null
@@ -249,6 +299,48 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_read: boolean
+          metadata: Json | null
+          priority: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          metadata?: Json | null
+          priority?: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          metadata?: Json | null
+          priority?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_created_at: string | null
@@ -361,6 +453,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subscribers: {
+        Row: {
+          billing_cycle: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          email: string
+          id: string
+          stripe_customer_id: string | null
+          subscribed: boolean
+          subscription_end: string | null
+          subscription_tier: string | null
+          updated_at: string
+          usage_applications: number | null
+          usage_properties: number | null
+          usage_storage: number | null
+          user_id: string
+        }
+        Insert: {
+          billing_cycle?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          email: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscribed?: boolean
+          subscription_end?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+          usage_applications?: number | null
+          usage_properties?: number | null
+          usage_storage?: number | null
+          user_id: string
+        }
+        Update: {
+          billing_cycle?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          email?: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscribed?: boolean
+          subscription_end?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+          usage_applications?: number | null
+          usage_properties?: number | null
+          usage_storage?: number | null
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

@@ -21,6 +21,7 @@ import LeaseManagement from '@/components/dashboard/LeaseManagement';
 import DocumentManager from '@/components/dashboard/DocumentManager';
 import BillingSettings from '@/components/dashboard/BillingSettings';
 import { Property } from '@/types/property';
+import { notificationService, Notification } from '@/services/notificationService';
 
 type Application = {
   id: string;
@@ -33,28 +34,26 @@ type Application = {
   phone: string;
 };
 
-type Document = {
-  id: string;
-  name: string;
-  date: string;
-  type: string;
-  property_title?: string;
-  tenant_name?: string;
-};
-
 const LandlordDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const { user, profile, signOut } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
   const [leases, setLeases] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     if (!user || !profile) return;
     loadLandlordData();
+    loadNotifications();
+    
+    // Subscribe to real-time notifications
+    const unsubscribe = notificationService.subscribeToNotifications((notification) => {
+      setNotifications(prev => [notification, ...prev]);
+    });
+
+    return unsubscribe;
   }, [user, profile]);
 
   const loadLandlordData = async () => {
@@ -65,7 +64,6 @@ const LandlordDashboard = () => {
         fetchApplicationsForLandlord(),
         fetchLeaseDocuments(),
       ]);
-      generateNotifications();
     } catch (error) {
       console.error("Error loading landlord data:", error);
       toast({
@@ -75,6 +73,15 @@ const LandlordDashboard = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadNotifications = async () => {
+    try {
+      const notificationData = await notificationService.getNotifications();
+      setNotifications(notificationData);
+    } catch (error) {
+      console.error("Error loading notifications:", error);
     }
   };
 
@@ -184,16 +191,7 @@ const LandlordDashboard = () => {
 
       if (error) throw error;
 
-      const formattedDocuments = data.map((lease) => ({
-        id: lease.id,
-        name: `Lease Agreement - ${lease.properties?.title || lease.properties?.address}`,
-        date: lease.created_at,
-        type: 'lease',
-        property_title: lease.properties?.title || lease.properties?.address,
-        tenant_name: lease.tenant_name,
-      }));
-
-      setDocuments(formattedDocuments);
+      setLeases(data || []);
     } catch (error) {
       console.error("Error fetching lease documents:", error);
     }
@@ -207,50 +205,25 @@ const LandlordDashboard = () => {
     }
   };
 
-  const generateNotifications = () => {
-    const newNotifications = [];
-    
-    // New applications notification
-    const pendingApps = applications.filter(app => app.status === 'new');
-    if (pendingApps.length > 0) {
-      newNotifications.push({
-        id: 'pending-apps',
-        type: 'application',
-        title: `${pendingApps.length} New Application${pendingApps.length > 1 ? 's' : ''}`,
-        description: 'Review and respond to tenant applications',
-        priority: 'medium',
-        actionLabel: 'View Applications',
-        onAction: () => setActiveTab('applications')
-      });
-    }
-
-    // Vacant units notification
-    const vacantUnits = properties.filter(p => p.is_available);
-    if (vacantUnits.length > 0) {
-      newNotifications.push({
-        id: 'vacant-units',
-        type: 'vacant_unit',
-        title: `${vacantUnits.length} Vacant Unit${vacantUnits.length > 1 ? 's' : ''}`,
-        description: 'Consider marketing these properties to find tenants',
-        priority: 'high',
-        actionLabel: 'View Properties',
-        onAction: () => setActiveTab('properties')
-      });
-    }
-
-    setNotifications(newNotifications);
-  };
-
   const handlePropertyAdded = () => {
     fetchProperties();
   };
 
-  const handleLeaseCreated = () => {
-    fetchLeaseDocuments();
+  const handleDismissNotification = async (id: string) => {
+    await notificationService.markAsRead(id);
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const handleDismissNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const handleMarkAsRead = async (id: string) => {
+    await notificationService.markAsRead(id);
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+    );
+  };
+
+  const handleClearAll = async () => {
+    await notificationService.markAllAsRead();
+    setNotifications([]);
   };
 
   const portfolioStats = {
@@ -259,37 +232,9 @@ const LandlordDashboard = () => {
     occupiedUnits: properties.filter(p => !p.is_available).length,
     vacantUnits: properties.filter(p => p.is_available).length,
     pendingApplications: applications.filter(a => a.status === 'new').length,
-    activeLeases: documents.filter(d => d.type === 'lease').length,
+    activeLeases: leases.length,
     expiringLeases: 0, // TODO: Calculate based on lease end dates
   };
-
-  const enhancedNotifications = [
-    {
-      id: 'urgent-apps',
-      type: 'application' as const,
-      title: `${applications.filter(a => a.status === 'new').length} New Applications`,
-      description: 'Review and respond to tenant applications',
-      priority: 'medium' as const,
-      timestamp: new Date().toISOString(),
-      actionLabel: 'Review Applications',
-      onAction: () => setActiveTab('applications'),
-      isRead: false,
-      metadata: {
-        propertyTitle: applications[0]?.property
-      }
-    },
-    {
-      id: 'vacant-units',
-      type: 'vacant_unit' as const,
-      title: `${properties.filter(p => p.is_available).length} Vacant Units`,
-      description: 'Properties available for rent - consider marketing',
-      priority: 'high' as const,
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      actionLabel: 'View Properties',
-      onAction: () => setActiveTab('properties'),
-      isRead: false
-    }
-  ];
 
   const mockBillingInfo = {
     currentPlan: 'professional' as const,
@@ -313,29 +258,6 @@ const LandlordDashboard = () => {
       expiryYear: 2027
     }
   };
-
-  const mockDocuments = [
-    {
-      id: '1',
-      name: 'Lease Agreement - Downtown Condo.pdf',
-      type: 'pdf' as const,
-      size: 2048000,
-      property_title: 'Downtown Condo',
-      category: 'lease' as const,
-      uploaded_at: '2024-01-15',
-      url: '/documents/lease1.pdf'
-    },
-    {
-      id: '2',
-      name: 'Inspection Report.pdf',
-      type: 'pdf' as const,
-      size: 1024000,
-      property_title: 'Suburban House',
-      category: 'inspection' as const,
-      uploaded_at: '2024-01-10',
-      url: '/documents/inspection1.pdf'
-    }
-  ];
 
   if (isLoading) {
     return (
@@ -362,6 +284,11 @@ const LandlordDashboard = () => {
             <Button variant="outline" size="sm" className="flex items-center gap-2">
               <Bell size={16} />
               <span className="hidden sm:inline">Notifications</span>
+              {notifications.filter(n => !n.is_read).length > 0 && (
+                <Badge className="bg-red-500 text-white text-xs px-1">
+                  {notifications.filter(n => !n.is_read).length}
+                </Badge>
+              )}
             </Button>
             <Button variant="outline" size="sm" onClick={() => signOut()}>
               <User size={16} />
@@ -372,10 +299,21 @@ const LandlordDashboard = () => {
 
         {/* Enhanced Notifications */}
         <EnhancedNotifications 
-          notifications={enhancedNotifications}
-          onDismiss={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
-          onMarkAsRead={(id) => console.log('Mark as read:', id)}
-          onClearAll={() => setNotifications([])}
+          notifications={notifications.map(n => ({
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            description: n.description || '',
+            priority: n.priority,
+            timestamp: n.created_at,
+            actionLabel: 'View',
+            onAction: () => n.action_url && (window.location.href = n.action_url),
+            isRead: n.is_read,
+            metadata: n.metadata
+          }))}
+          onDismiss={handleDismissNotification}
+          onMarkAsRead={handleMarkAsRead}
+          onClearAll={handleClearAll}
         />
 
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
@@ -484,16 +422,16 @@ const LandlordDashboard = () => {
 
           <TabsContent value="leases" className="space-y-6">
             <LeaseManagement
-              leases={documents.filter(d => d.type === 'lease').map(d => ({
-                id: d.id,
-                tenant_name: d.tenant_name || 'Unknown Tenant',
-                property_title: d.property_title || 'Unknown Property',
-                monthly_rent: 2500,
-                lease_start_date: '2024-01-01',
-                lease_end_date: '2024-12-31',
-                status: 'active' as const,
-                created_at: d.date,
-                document_url: `/documents/${d.id}.pdf`
+              leases={leases.map(lease => ({
+                id: lease.id,
+                tenant_name: lease.tenant_name,
+                property_title: lease.properties?.title || lease.properties?.address || 'Unknown Property',
+                monthly_rent: lease.monthly_rent,
+                lease_start_date: lease.lease_start_date,
+                lease_end_date: lease.lease_end_date,
+                status: lease.status,
+                created_at: lease.created_at,
+                document_url: `/documents/${lease.id}.pdf`
               }))}
               onPreviewLease={(id) => console.log('Preview lease:', id)}
               onDownloadLease={(id) => console.log('Download lease:', id)}
@@ -502,15 +440,7 @@ const LandlordDashboard = () => {
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-6">
-            <DocumentManager
-              documents={mockDocuments}
-              onUpload={(files) => console.log('Upload files:', files)}
-              onDelete={(id) => console.log('Delete document:', id)}
-              onPreview={(id) => console.log('Preview document:', id)}
-              onDownload={(id) => console.log('Download document:', id)}
-              storageUsed={2048}
-              storageLimit={10240}
-            />
+            <DocumentManager onDocumentUploaded={() => console.log('Document uploaded')} />
           </TabsContent>
 
           <TabsContent value="billing" className="space-y-6">
