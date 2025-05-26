@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Notification {
@@ -34,7 +33,7 @@ export const notificationService = {
         priority: item.priority as Notification['priority'],
         is_read: item.is_read,
         action_url: item.action_url,
-        metadata: item.metadata || {},
+        metadata: (item.metadata as Record<string, any>) || {},
         created_at: item.created_at,
         expires_at: item.expires_at
       }));
@@ -114,7 +113,7 @@ export const notificationService = {
             priority: newNotification.priority as Notification['priority'],
             is_read: newNotification.is_read,
             action_url: newNotification.action_url,
-            metadata: newNotification.metadata || {},
+            metadata: (newNotification.metadata as Record<string, any>) || {},
             created_at: newNotification.created_at,
             expires_at: newNotification.expires_at
           });

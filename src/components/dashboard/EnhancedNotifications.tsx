@@ -1,4 +1,3 @@
-
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +23,7 @@ type Notification = {
   type: 'application' | 'lease_expiring' | 'vacant_unit' | 'payment' | 'maintenance' | 'system';
   title: string;
   description: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'high' | 'medium' | 'low' | 'urgent';
   timestamp: string;
   actionLabel?: string;
   actionUrl?: string;
@@ -54,7 +53,7 @@ const EnhancedNotifications = ({
   showInlineNotifications = true
 }: EnhancedNotificationsProps) => {
   const [collapsed, setCollapsed] = useState(false);
-  const [filterPriority, setFilterPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [filterPriority, setFilterPriority] = useState<'all' | 'high' | 'medium' | 'low' | 'urgent'>('all');
 
   const getIcon = (type: Notification['type']) => {
     switch (type) {
@@ -77,6 +76,12 @@ const EnhancedNotifications = ({
 
   const getPriorityConfig = (priority: Notification['priority']) => {
     switch (priority) {
+      case 'urgent':
+        return { 
+          color: 'border-l-red-600 bg-red-100', 
+          badge: 'bg-red-200 text-red-800',
+          dot: 'bg-red-600'
+        };
       case 'high':
         return { 
           color: 'border-l-red-500 bg-red-50', 
@@ -118,7 +123,7 @@ const EnhancedNotifications = ({
   );
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
-  const highPriorityCount = notifications.filter(n => n.priority === 'high' && !n.isRead).length;
+  const highPriorityCount = notifications.filter(n => (n.priority === 'high' || n.priority === 'urgent') && !n.isRead).length;
 
   if (notifications.length === 0) return null;
 
@@ -174,6 +179,7 @@ const EnhancedNotifications = ({
                   className="text-sm border border-gray-300 rounded px-2 py-1"
                 >
                   <option value="all">All Priority</option>
+                  <option value="urgent">Urgent Priority</option>
                   <option value="high">High Priority</option>
                   <option value="medium">Medium Priority</option>
                   <option value="low">Low Priority</option>
@@ -296,7 +302,7 @@ const EnhancedNotifications = ({
       {showInlineNotifications && (
         <div className="space-y-2">
           {notifications
-            .filter(n => n.priority === 'high' && !n.isRead)
+            .filter(n => (n.priority === 'high' || n.priority === 'urgent') && !n.isRead)
             .slice(0, 3)
             .map(notification => (
               <Alert key={`inline-${notification.id}`} className="border-l-4 border-l-red-500 bg-red-50 shadow-sm">
