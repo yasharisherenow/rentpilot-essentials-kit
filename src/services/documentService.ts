@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -62,7 +61,19 @@ export const documentService = {
         description: "Document uploaded successfully",
       });
 
-      return data;
+      // Type cast the result to ensure proper types
+      return {
+        id: data.id,
+        name: data.name,
+        original_name: data.original_name,
+        file_path: data.file_path,
+        file_size: data.file_size,
+        mime_type: data.mime_type,
+        category: data.category as DocumentCategory,
+        property_id: data.property_id,
+        uploaded_at: data.uploaded_at,
+        updated_at: data.updated_at
+      };
     } catch (error) {
       console.error('Error uploading document:', error);
       toast({
@@ -82,7 +93,20 @@ export const documentService = {
         .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Type cast the database results to ensure proper types
+      return (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        original_name: item.original_name,
+        file_path: item.file_path,
+        file_size: item.file_size,
+        mime_type: item.mime_type,
+        category: item.category as DocumentCategory,
+        property_id: item.property_id,
+        uploaded_at: item.uploaded_at,
+        updated_at: item.updated_at
+      }));
     } catch (error) {
       console.error('Error fetching documents:', error);
       return [];

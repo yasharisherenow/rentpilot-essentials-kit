@@ -129,16 +129,16 @@ const DocumentManager = ({ onDocumentUploaded }: DocumentManagerProps) => {
     }
   };
 
-  const handleDownload = async (document: Document) => {
+  const handleDownload = async (doc: Document) => {
     try {
-      const url = await documentService.getDocumentUrl(document.file_path);
+      const url = await documentService.getDocumentUrl(doc.file_path);
       if (url) {
-        const link = document.createElement('a');
+        const link = window.document.createElement('a');
         link.href = url;
-        link.download = document.original_name;
-        document.body.appendChild(link);
+        link.download = doc.original_name;
+        window.document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        window.document.body.removeChild(link);
       }
     } catch (error) {
       toast({

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface Notification {
   id: string;
-  type: 'application' | 'lease_expiring' | 'vacant_unit' | 'payment' | 'document' | 'system';
+  type: 'application' | 'lease_expiring' | 'vacant_unit' | 'payment' | 'maintenance' | 'system';
   title: string;
   description?: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
@@ -24,7 +24,20 @@ export const notificationService = {
         .limit(50);
 
       if (error) throw error;
-      return data || [];
+      
+      // Type cast the database results to ensure proper types
+      return (data || []).map(item => ({
+        id: item.id,
+        type: item.type as Notification['type'],
+        title: item.title,
+        description: item.description,
+        priority: item.priority as Notification['priority'],
+        is_read: item.is_read,
+        action_url: item.action_url,
+        metadata: item.metadata || {},
+        created_at: item.created_at,
+        expires_at: item.expires_at
+      }));
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return [];
@@ -92,7 +105,19 @@ export const notificationService = {
           table: 'notifications'
         },
         (payload) => {
-          callback(payload.new as Notification);
+          const newNotification = payload.new as any;
+          callback({
+            id: newNotification.id,
+            type: newNotification.type as Notification['type'],
+            title: newNotification.title,
+            description: newNotification.description,
+            priority: newNotification.priority as Notification['priority'],
+            is_read: newNotification.is_read,
+            action_url: newNotification.action_url,
+            metadata: newNotification.metadata || {},
+            created_at: newNotification.created_at,
+            expires_at: newNotification.expires_at
+          });
         }
       )
       .subscribe();
