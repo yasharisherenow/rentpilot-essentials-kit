@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Home, FileText, User, PlusCircle, AlertCircle, Bell, Plus } from 'lucide-react';
+import { Home, FileText, User, PlusCircle, AlertCircle, Bell, Plus, Settings, CreditCard, FolderOpen } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -15,7 +15,11 @@ import EditPropertyForm from '@/components/EditPropertyForm';
 import AccountManagement from '@/components/AccountManagement';
 import PortfolioOverview from '@/components/dashboard/PortfolioOverview';
 import PropertyCard from '@/components/dashboard/PropertyCard';
-import DashboardNotifications from '@/components/dashboard/DashboardNotifications';
+import EnhancedNotifications from '@/components/dashboard/EnhancedNotifications';
+import ApplicationBoard from '@/components/dashboard/ApplicationBoard';
+import LeaseManagement from '@/components/dashboard/LeaseManagement';
+import DocumentManager from '@/components/dashboard/DocumentManager';
+import BillingSettings from '@/components/dashboard/BillingSettings';
 import { Property } from '@/types/property';
 
 type Application = {
@@ -44,6 +48,7 @@ const LandlordDashboard = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [leases, setLeases] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState<any[]>([]);
 
@@ -258,6 +263,80 @@ const LandlordDashboard = () => {
     expiringLeases: 0, // TODO: Calculate based on lease end dates
   };
 
+  const enhancedNotifications = [
+    {
+      id: 'urgent-apps',
+      type: 'application' as const,
+      title: `${applications.filter(a => a.status === 'pending').length} New Applications`,
+      description: 'Review and respond to tenant applications',
+      priority: 'medium' as const,
+      timestamp: new Date().toISOString(),
+      actionLabel: 'Review Applications',
+      onAction: () => setActiveTab('applications'),
+      isRead: false,
+      metadata: {
+        propertyTitle: applications[0]?.property
+      }
+    },
+    {
+      id: 'vacant-units',
+      type: 'vacant_unit' as const,
+      title: `${properties.filter(p => p.is_available).length} Vacant Units`,
+      description: 'Properties available for rent - consider marketing',
+      priority: 'high' as const,
+      timestamp: new Date(Date.now() - 3600000).toISOString(),
+      actionLabel: 'View Properties',
+      onAction: () => setActiveTab('properties'),
+      isRead: false
+    }
+  ];
+
+  const mockBillingInfo = {
+    currentPlan: 'professional' as const,
+    billingCycle: 'monthly' as const,
+    nextBillingDate: '2024-02-15',
+    currentUsage: {
+      properties: properties.length,
+      applications: applications.length,
+      storage: 2048 // 2GB in MB
+    },
+    planLimits: {
+      properties: 25,
+      applications: 100,
+      storage: 10240 // 10GB in MB
+    },
+    paymentMethod: {
+      type: 'card' as const,
+      last4: '4242',
+      brand: 'visa',
+      expiryMonth: 12,
+      expiryYear: 2027
+    }
+  };
+
+  const mockDocuments = [
+    {
+      id: '1',
+      name: 'Lease Agreement - Downtown Condo.pdf',
+      type: 'pdf' as const,
+      size: 2048000,
+      property_title: 'Downtown Condo',
+      category: 'lease' as const,
+      uploaded_at: '2024-01-15',
+      url: '/documents/lease1.pdf'
+    },
+    {
+      id: '2',
+      name: 'Inspection Report.pdf',
+      type: 'pdf' as const,
+      size: 1024000,
+      property_title: 'Suburban House',
+      category: 'inspection' as const,
+      uploaded_at: '2024-01-10',
+      url: '/documents/inspection1.pdf'
+    }
+  ];
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 flex items-center justify-center" style={{ height: 'calc(100vh - 200px)' }}>
@@ -291,14 +370,16 @@ const LandlordDashboard = () => {
           </div>
         </div>
 
-        {/* Notifications */}
-        <DashboardNotifications 
-          notifications={notifications}
-          onDismiss={handleDismissNotification}
+        {/* Enhanced Notifications */}
+        <EnhancedNotifications 
+          notifications={enhancedNotifications}
+          onDismiss={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+          onMarkAsRead={(id) => console.log('Mark as read:', id)}
+          onClearAll={() => setNotifications([])}
         />
 
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 mb-8 bg-white shadow-sm rounded-xl">
+          <TabsList className="grid grid-cols-6 mb-8 bg-white shadow-sm rounded-xl">
             <TabsTrigger value="overview" className="data-[state=active]:bg-[#0C6E5F] data-[state=active]:text-white">
               Overview
             </TabsTrigger>
@@ -308,8 +389,14 @@ const LandlordDashboard = () => {
             <TabsTrigger value="applications" className="data-[state=active]:bg-[#0C6E5F] data-[state=active]:text-white">
               Applications
             </TabsTrigger>
+            <TabsTrigger value="leases" className="data-[state=active]:bg-[#0C6E5F] data-[state=active]:text-white">
+              Leases
+            </TabsTrigger>
             <TabsTrigger value="documents" className="data-[state=active]:bg-[#0C6E5F] data-[state=active]:text-white">
               Documents
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="data-[state=active]:bg-[#0C6E5F] data-[state=active]:text-white">
+              Billing
             </TabsTrigger>
           </TabsList>
           
@@ -387,121 +474,53 @@ const LandlordDashboard = () => {
           </TabsContent>
           
           <TabsContent value="applications" className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">Tenant Applications</h2>
-            </div>
-            
-            {applications.length > 0 ? (
-              <div className="bg-white rounded-lg shadow">
-                <div className="hidden md:grid md:grid-cols-5 gap-4 p-4 border-b text-sm font-medium text-gray-500">
-                  <div>Applicant</div>
-                  <div>Property</div>
-                  <div>Contact</div>
-                  <div>Date</div>
-                  <div>Status</div>
-                </div>
-                <div className="divide-y">
-                  {applications.map(application => (
-                    <div key={application.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 hover:bg-gray-50">
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Applicant</div>
-                        {application.applicant}
-                      </div>
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Property</div>
-                        {application.property}
-                      </div>
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Contact</div>
-                        <div className="text-sm">
-                          <div>{application.email}</div>
-                          <div className="text-gray-500">{application.phone}</div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Date</div>
-                        {formatDate(application.date)}
-                      </div>
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Status</div>
-                        <Badge className={
-                          application.status === 'approved' 
-                            ? 'bg-green-500' 
-                            : application.status === 'rejected'
-                            ? 'bg-red-500'
-                            : 'bg-amber-500'
-                        }>
-                          {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <div className="text-gray-400 mb-2">
-                  <User size={40} className="mx-auto" />
-                </div>
-                <h3 className="text-lg font-medium mb-1">No Applications Found</h3>
-                <p className="text-gray-500 mb-4">You don't have any tenant applications yet.</p>
-              </div>
-            )}
+            <ApplicationBoard
+              applications={applications}
+              onStatusChange={(id, status) => console.log('Status change:', id, status)}
+              onCreateLease={(id) => console.log('Create lease:', id)}
+              onViewDetails={(id) => console.log('View details:', id)}
+            />
           </TabsContent>
-          
+
+          <TabsContent value="leases" className="space-y-6">
+            <LeaseManagement
+              leases={documents.filter(d => d.type === 'lease').map(d => ({
+                id: d.id,
+                tenant_name: d.tenant_name || 'Unknown Tenant',
+                property_title: d.property_title || 'Unknown Property',
+                monthly_rent: 2500,
+                lease_start_date: '2024-01-01',
+                lease_end_date: '2024-12-31',
+                status: 'active' as const,
+                created_at: d.date,
+                document_url: `/documents/${d.id}.pdf`
+              }))}
+              onPreviewLease={(id) => console.log('Preview lease:', id)}
+              onDownloadLease={(id) => console.log('Download lease:', id)}
+              onDuplicateLease={(id) => console.log('Duplicate lease:', id)}
+            />
+          </TabsContent>
+
           <TabsContent value="documents" className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">Documents</h2>
-              <Button asChild className="bg-rentpilot-600 hover:bg-rentpilot-700">
-                <Link to="/lease">Create Lease</Link>
-              </Button>
-            </div>
-            
-            {documents.length > 0 ? (
-              <div className="bg-white rounded-lg shadow">
-                <div className="hidden md:grid md:grid-cols-4 gap-4 p-4 border-b text-sm font-medium text-gray-500">
-                  <div className="col-span-2">Document</div>
-                  <div>Date</div>
-                  <div>Type</div>
-                </div>
-                <div className="divide-y">
-                  {documents.map(document => (
-                    <div key={document.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 hover:bg-gray-50">
-                      <div className="md:col-span-2 flex items-center">
-                        <FileText className="mr-2 text-rentpilot-600" size={20} />
-                        <div>
-                          <div className="font-medium">{document.name}</div>
-                          {document.tenant_name && (
-                            <div className="text-sm text-gray-500">Tenant: {document.tenant_name}</div>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Date</div>
-                        {formatDate(document.date)}
-                      </div>
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-gray-500 mb-1">Type</div>
-                        <Badge variant="outline" className="capitalize">
-                          {document.type}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <div className="text-gray-400 mb-2">
-                  <FileText size={40} className="mx-auto" />
-                </div>
-                <h3 className="text-lg font-medium mb-1">No Documents Found</h3>
-                <p className="text-gray-500 mb-4">Start by creating a lease</p>
-                <Button asChild className="bg-rentpilot-600 hover:bg-rentpilot-700">
-                  <Link to="/lease">Create Lease</Link>
-                </Button>
-              </div>
-            )}
+            <DocumentManager
+              documents={mockDocuments}
+              onUpload={(files) => console.log('Upload files:', files)}
+              onDelete={(id) => console.log('Delete document:', id)}
+              onPreview={(id) => console.log('Preview document:', id)}
+              onDownload={(id) => console.log('Download document:', id)}
+              storageUsed={2048}
+              storageLimit={10240}
+            />
+          </TabsContent>
+
+          <TabsContent value="billing" className="space-y-6">
+            <BillingSettings
+              billingInfo={mockBillingInfo}
+              onUpdatePaymentMethod={() => console.log('Update payment method')}
+              onViewInvoices={() => console.log('View invoices')}
+              onUpgradePlan={(plan) => console.log('Upgrade to:', plan)}
+              onCancelSubscription={() => console.log('Cancel subscription')}
+            />
           </TabsContent>
         </Tabs>
       </div>
