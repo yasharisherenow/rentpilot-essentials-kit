@@ -28,7 +28,7 @@ type Application = {
   property: string;
   property_id: string;
   date: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'new' | 'reviewed' | 'approved' | 'rejected';
   email: string;
   phone: string;
 };
@@ -152,7 +152,7 @@ const LandlordDashboard = () => {
         property: app.properties?.title || app.properties?.address || 'Unknown property',
         property_id: app.property_id,
         date: app.created_at,
-        status: app.status as 'pending' | 'approved' | 'rejected',
+        status: app.status === 'pending' ? 'new' as const : app.status as 'new' | 'reviewed' | 'approved' | 'rejected',
         email: app.email,
         phone: app.phone,
       }));
@@ -211,7 +211,7 @@ const LandlordDashboard = () => {
     const newNotifications = [];
     
     // New applications notification
-    const pendingApps = applications.filter(app => app.status === 'pending');
+    const pendingApps = applications.filter(app => app.status === 'new');
     if (pendingApps.length > 0) {
       newNotifications.push({
         id: 'pending-apps',
@@ -258,7 +258,7 @@ const LandlordDashboard = () => {
     totalProperties: properties.length,
     occupiedUnits: properties.filter(p => !p.is_available).length,
     vacantUnits: properties.filter(p => p.is_available).length,
-    pendingApplications: applications.filter(a => a.status === 'pending').length,
+    pendingApplications: applications.filter(a => a.status === 'new').length,
     activeLeases: documents.filter(d => d.type === 'lease').length,
     expiringLeases: 0, // TODO: Calculate based on lease end dates
   };
@@ -267,7 +267,7 @@ const LandlordDashboard = () => {
     {
       id: 'urgent-apps',
       type: 'application' as const,
-      title: `${applications.filter(a => a.status === 'pending').length} New Applications`,
+      title: `${applications.filter(a => a.status === 'new').length} New Applications`,
       description: 'Review and respond to tenant applications',
       priority: 'medium' as const,
       timestamp: new Date().toISOString(),
