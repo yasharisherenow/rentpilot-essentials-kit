@@ -2,179 +2,216 @@
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { 
-  ClipboardCheck, Shield, FileText, Calendar, Clock, CreditCard, Mail
+  ClipboardCheck, Shield, FileText, Calendar, Clock, CreditCard, Mail, ChevronDown, Star, Zap, Database, DollarSign
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-const FeatureItem = ({ title, description, icon }: { title: string, description: string, icon: React.ReactNode }) => (
-  <div className="flex flex-col md:flex-row gap-4 items-start border rounded-lg p-6 bg-white shadow-sm hover:shadow-md transition-all animate-fade-up">
-    <div className="bg-rentpilot-50 p-3 rounded-lg text-rentpilot-600">
-      {icon}
-    </div>
-    <div>
-      <h3 className="text-lg font-medium mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+const FeatureCard = ({ title, description, icon }: { title: string, description: string, icon: React.ReactNode }) => (
+  <div className="group relative bg-gradient-to-br from-slate-800/50 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 hover:border-yellow-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-yellow-500/20">
+    <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
+    <div className="relative z-10">
+      <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 p-4 rounded-xl mb-6 w-fit shadow-lg shadow-yellow-500/30 group-hover:shadow-yellow-500/50 transition-all duration-500">
+        {icon}
+      </div>
+      <h3 className="text-xl font-bold mb-4 text-white group-hover:text-yellow-400 transition-colors duration-300">{title}</h3>
+      <p className="text-slate-300 leading-relaxed">{description}</p>
     </div>
   </div>
 );
 
+const TestimonialCard = ({ quote, author, rating }: { quote: string, author: string, rating: number }) => (
+  <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 hover:border-yellow-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/10">
+    <div className="flex text-yellow-400 mb-6 space-x-1">
+      {[...Array(rating)].map((_, i) => (
+        <Star key={i} size={20} fill="currentColor" className="drop-shadow-lg" />
+      ))}
+    </div>
+    <p className="text-slate-200 text-lg mb-6 leading-relaxed italic">"{quote}"</p>
+    <div className="flex items-center space-x-4">
+      <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center text-black font-bold text-lg shadow-lg shadow-yellow-500/30">
+        {author.split(' ').map(n => n[0]).join('')}
+      </div>
+      <p className="font-semibold text-white">- {author}</p>
+    </div>
+  </div>
+);
+
+const ScrollIndicator = () => {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setVisible(window.scrollY < 100);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <div className={`absolute bottom-8 left-1/2 transform -translate-x-1/2 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="flex flex-col items-center space-y-2 text-yellow-400">
+        <span className="text-sm font-medium tracking-wider uppercase">Scroll to Explore</span>
+        <ChevronDown size={24} className="animate-bounce drop-shadow-lg" />
+      </div>
+    </div>
+  );
+};
+
 const Index = () => {
   return (
-    <>
+    <div className="bg-slate-950 text-white overflow-hidden">
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-white to-rentpilot-50 section-padding">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center">
-            <div className="md:w-1/2 mb-10 md:mb-0">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                Property management <span className="gradient-text">simplified</span> for small landlords
-              </h1>
-              <p className="text-xl text-gray-600 mb-8 max-w-lg">
-                Streamline your rental process with digital applications, leases, and documents. Perfect for landlords with 1-5 units.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button asChild size="lg" className="bg-rentpilot-600 hover:bg-rentpilot-700">
-                  <Link to="/application">Get Started for Free</Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <a href="#features">Learn More</a>
-                </Button>
-              </div>
+      <section className="relative min-h-screen flex items-center justify-center">
+        {/* Animated Background */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-black" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/20 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,213,0,0.1),transparent_50%)]" />
+        </div>
+
+        <div className="relative z-10 container mx-auto px-4 text-center">
+          <div className="max-w-5xl mx-auto">
+            <h1 className="text-6xl md:text-8xl lg:text-9xl font-black mb-8 leading-tight">
+              <span className="block bg-gradient-to-r from-white via-yellow-200 to-yellow-400 bg-clip-text text-transparent drop-shadow-2xl">
+                Built for Landlords.
+              </span>
+              <span className="block bg-gradient-to-r from-yellow-400 via-yellow-300 to-white bg-clip-text text-transparent drop-shadow-2xl mt-4">
+                Designed to Feel Like Magic.
+              </span>
+            </h1>
+            
+            <p className="text-xl md:text-2xl text-slate-300 mb-12 max-w-3xl mx-auto leading-relaxed font-medium">
+              Manage leases, tenants, and documents — without spreadsheets.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold px-12 py-6 text-lg rounded-2xl shadow-2xl shadow-yellow-500/30 hover:shadow-yellow-500/50 hover:scale-105 transition-all duration-300 border-2 border-yellow-400">
+                <Link to="/application">Get Started</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="border-2 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-400 px-12 py-6 text-lg rounded-2xl backdrop-blur-sm hover:scale-105 transition-all duration-300">
+                <Link to="/pricing">View Pricing</Link>
+              </Button>
             </div>
-            <div className="md:w-1/2 md:pl-10">
-              <img 
-                src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" 
-                alt="RentPilot Dashboard" 
-                className="rounded-lg shadow-xl max-w-full" 
-              />
-            </div>
+          </div>
+        </div>
+
+        <ScrollIndicator />
+      </section>
+
+      {/* Features Section */}
+      <section className="relative py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 to-slate-900" />
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+        
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="text-center mb-20">
+            <h2 className="text-5xl md:text-6xl font-black mb-6 bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent">
+              Powered by Innovation
+            </h2>
+            <p className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
+              Experience the future of property management with cutting-edge tools designed for modern landlords.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <FeatureCard 
+              icon={<Zap size={32} className="text-black" />}
+              title="Digital Lease Generator"
+              description="Create professional lease agreements in seconds with our AI-powered generator."
+            />
+            <FeatureCard 
+              icon={<ClipboardCheck size={32} className="text-black" />}
+              title="Property & Tenant Management"
+              description="Streamline your entire portfolio with intelligent tenant and property tracking."
+            />
+            <FeatureCard 
+              icon={<Database size={32} className="text-black" />}
+              title="PIPEDA-Compliant Storage"
+              description="Secure, encrypted document storage that meets all Canadian privacy regulations."
+            />
+            <FeatureCard 
+              icon={<DollarSign size={32} className="text-black" />}
+              title="Simple Pricing"
+              description="Transparent pricing from $9.99-$19.99. No hidden fees, no surprises."
+            />
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="section-padding bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything you need to manage your rentals</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              No more paperwork hassles. Just simple, digital tools designed for small landlords.
+      {/* Testimonials Section */}
+      <section className="relative py-32">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950" />
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+        
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="text-center mb-20">
+            <h2 className="text-5xl md:text-6xl font-black mb-6 bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent">
+              Trusted by Landlords
+            </h2>
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+              Join hundreds of Canadian landlords who have transformed their rental management.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8">
-            <FeatureItem 
-              icon={<ClipboardCheck size={24} />}
-              title="Digital Applications"
-              description="Collect and review tenant applications online with standardized forms."
+          <div className="grid md:grid-cols-3 gap-8">
+            <TestimonialCard 
+              quote="RentPilot has completely revolutionized how I manage my properties. The digital lease generator alone saves me hours every week."
+              author="Sarah Chen"
+              rating={5}
             />
-            <FeatureItem 
-              icon={<FileText size={24} />}
-              title="Digital Lease Agreements"
-              description="Create, send, and sign lease agreements securely online."
+            <TestimonialCard 
+              quote="Finally, a property management tool that actually understands small landlords. Clean, powerful, and affordable."
+              author="Michael Torres"
+              rating={5}
             />
-            <FeatureItem 
-              icon={<Calendar size={24} />}
-              title="Important Date Reminders"
-              description="Never miss a lease renewal or important deadline again."
-            />
-            <FeatureItem 
-              icon={<Shield size={24} />}
-              title="PIPEDA Compliant"
-              description="Your data is handled according to Canadian privacy regulations."
-            />
-            <FeatureItem 
-              icon={<Clock size={24} />}
-              title="Save Time"
-              description="Eliminate paperwork and administrative tasks with digital workflows."
-            />
-            <FeatureItem 
-              icon={<CreditCard size={24} />}
-              title="Affordable Plans"
-              description="Simple pricing designed for small landlords, not large property companies."
+            <TestimonialCard 
+              quote="The PIPEDA compliance gives me peace of mind, and my tenants love the digital application process. It's a win-win."
+              author="Jennifer Walsh"
+              rating={5}
             />
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="section-padding bg-rentpilot-600 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to simplify your rental management?</h2>
-          <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Join hundreds of Canadian landlords who are saving time and reducing stress with RentPilot.
+      <section className="relative py-32">
+        <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-slate-950 to-slate-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,213,0,0.15),transparent_70%)]" />
+        
+        <div className="relative z-10 container mx-auto px-4 text-center">
+          <h2 className="text-5xl md:text-6xl font-black mb-8 bg-gradient-to-r from-yellow-400 via-yellow-300 to-white bg-clip-text text-transparent">
+            Ready to Experience the Future?
+          </h2>
+          <p className="text-xl text-slate-300 mb-12 max-w-3xl mx-auto leading-relaxed">
+            Join the revolution in property management. Start your free trial today and see why landlords are making the switch to RentPilot.
           </p>
-          <Button asChild size="lg" variant="secondary">
-            <Link to="/application">Get Started Now</Link>
+          <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold px-16 py-8 text-xl rounded-2xl shadow-2xl shadow-yellow-500/40 hover:shadow-yellow-500/60 hover:scale-105 transition-all duration-300 border-2 border-yellow-400">
+            <Link to="/application">Start Free Trial</Link>
           </Button>
-        </div>
-      </section>
-      
-      {/* Testimonial Section */}
-      <section className="section-padding">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Trusted by landlords across Canada</h2>
-            <p className="text-xl text-gray-600">Hear from some of our satisfied customers.</p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex text-yellow-400 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <svg key={i} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                    <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
-                  </svg>
-                ))}
-              </div>
-              <p className="text-gray-600 mb-4">"RentPilot has saved me so much time with my rental properties. The digital lease process alone is worth it."</p>
-              <p className="font-medium">- Sarah T., Vancouver</p>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex text-yellow-400 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <svg key={i} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                    <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
-                  </svg>
-                ))}
-              </div>
-              <p className="text-gray-600 mb-4">"As someone with just two rental properties, I needed something simple but professional. RentPilot delivers exactly that."</p>
-              <p className="font-medium">- Michael L., Toronto</p>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex text-yellow-400 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <svg key={i} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                    <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
-                  </svg>
-                ))}
-              </div>
-              <p className="text-gray-600 mb-4">"The tenant application process is so streamlined now. I love how everything is organized in one place."</p>
-              <p className="font-medium">- David K., Montreal</p>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* Contact CTA Section */}
-      <section className="section-padding bg-gray-50">
-        <div className="container mx-auto px-4 text-center">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-            <div className="bg-rentpilot-50 p-4 rounded-full">
-              <Mail size={32} className="text-rentpilot-600" />
+      <section className="relative py-24 border-t border-slate-800">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 to-black" />
+        
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-12 max-w-4xl mx-auto">
+            <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-2xl shadow-2xl shadow-yellow-500/30">
+              <Mail size={48} className="text-black" />
             </div>
-            <div className="text-left">
-              <h3 className="text-2xl font-semibold mb-2">Have questions?</h3>
-              <p className="text-gray-600 mb-0">We're here to help you get the most out of RentPilot.</p>
+            <div className="text-center md:text-left">
+              <h3 className="text-3xl font-bold mb-4 text-white">Questions? We're Here to Help</h3>
+              <p className="text-slate-300 text-lg leading-relaxed">Connect with our team to discover how RentPilot can transform your rental business.</p>
             </div>
-            <Button asChild className="bg-rentpilot-600 hover:bg-rentpilot-700">
+            <Button asChild className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold px-8 py-4 rounded-xl shadow-lg shadow-yellow-500/30 hover:shadow-yellow-500/50 hover:scale-105 transition-all duration-300">
               <Link to="/contact">Contact Us</Link>
             </Button>
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 };
 
