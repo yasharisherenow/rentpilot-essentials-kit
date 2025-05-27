@@ -10,15 +10,17 @@ import {
   Check,
   AlertTriangle,
   Calendar,
-  DollarSign,
-  Zap
+  Zap,
+  RefreshCw
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useToast } from '@/hooks/use-toast';
 
 type BillingInfo = {
-  currentPlan: 'starter' | 'professional' | 'enterprise';
+  currentPlan: 'starter' | 'professional' | 'enterprise' | 'free';
   billingCycle: 'monthly' | 'yearly';
-  nextBillingDate: string;
+  nextBillingDate?: string;
   currentUsage: {
     properties: number;
     applications: number;
@@ -46,23 +48,52 @@ type BillingSettingsProps = {
   onCancelSubscription: () => void;
 };
 
+// Mock data for demonstration - in real app this would come from your backend
+const mockBillingInfo: BillingInfo = {
+  currentPlan: 'starter',
+  billingCycle: 'monthly',
+  nextBillingDate: '2024-02-15',
+  currentUsage: {
+    properties: 3,
+    applications: 12,
+    storage: 256
+  },
+  planLimits: {
+    properties: 5,
+    applications: 50,
+    storage: 1024
+  }
+};
+
 const BillingSettings = ({ 
-  billingInfo, 
-  onUpdatePaymentMethod, 
-  onViewInvoices, 
-  onUpgradePlan,
-  onCancelSubscription
-}: BillingSettingsProps) => {
+  billingInfo = mockBillingInfo, 
+  onUpdatePaymentMethod = () => {}, 
+  onViewInvoices = () => {}, 
+  onUpgradePlan = () => {},
+  onCancelSubscription = () => {}
+}: Partial<BillingSettingsProps>) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { subscriptionData, loading, checkSubscription, createCheckoutSession, openCustomerPortal } = useSubscription();
+  const { toast } = useToast();
 
   const planConfig = {
+    free: {
+      name: 'Free',
+      price: { monthly: 0, yearly: 0 },
+      color: 'bg-gray-50 border-gray-200',
+      textColor: 'text-gray-700',
+      icon: <Zap className="text-gray-600" size={20} />,
+      features: ['Up to 2 properties', 'Basic applications', '500MB storage', 'Email support'],
+      priceId: null
+    },
     starter: {
       name: 'Starter',
       price: { monthly: 29, yearly: 290 },
       color: 'bg-blue-50 border-blue-200',
       textColor: 'text-blue-700',
       icon: <Zap className="text-blue-600" size={20} />,
-      features: ['Up to 5 properties', 'Basic applications', '1GB storage', 'Email support']
+      features: ['Up to 5 properties', 'Basic applications', '1GB storage', 'Email support'],
+      priceId: 'price_1OtGJzLkdIwHu7ixmNJhJgzx' // Replace with your actual Stripe price ID
     },
     professional: {
       name: 'Professional',
@@ -70,7 +101,8 @@ const BillingSettings = ({
       color: 'bg-[#0C6E5F]/10 border-[#0C6E5F]/20',
       textColor: 'text-[#0C6E5F]',
       icon: <Crown className="text-[#0C6E5F]" size={20} />,
-      features: ['Up to 25 properties', 'Advanced applications', '10GB storage', 'Priority support', 'Document manager']
+      features: ['Up to 25 properties', 'Advanced applications', '10GB storage', 'Priority support', 'Document manager'],
+      priceId: 'price_1OtGK0LkdIwHu7ixOzTk5hm2' // Replace with your actual Stripe price ID
     },
     enterprise: {
       name: 'Enterprise',
@@ -78,29 +110,60 @@ const BillingSettings = ({
       color: 'bg-purple-50 border-purple-200',
       textColor: 'text-purple-700',
       icon: <Crown className="text-purple-600" size={20} />,
-      features: ['Unlimited properties', 'Full feature access', 'Unlimited storage', '24/7 support', 'Custom integrations']
+      features: ['Unlimited properties', 'Full feature access', 'Unlimited storage', '24/7 support', 'Custom integrations'],
+      priceId: 'price_1OtGK1LkdIwHu7ixvJgH5mzP' // Replace with your actual Stripe price ID
     }
   };
 
-  const currentPlanConfig = planConfig[billingInfo.currentPlan];
-  const currentPrice = currentPlanConfig.price[billingInfo.billingCycle];
+  const currentPlan = subscriptionData.subscribed && subscriptionData.subscription_tier 
+    ? subscriptionData.subscription_tier as keyof typeof planConfig
+    : 'free';
+  const currentPlanConfig = planConfig[currentPlan];
+  const currentPrice = currentPlanConfig.price[billingInfo?.billingCycle || 'monthly'];
 
   const getUsagePercentage = (used: number, limit: number) => {
     return limit === -1 ? 0 : (used / limit) * 100;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+  const formatDate = (dateString?: string) => {
+    return dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
   };
 
-  const handleUpgrade = async (plan: string) => {
+  const handleUpgrade = async (planKey: string) => {
+    const plan = planConfig[planKey as keyof typeof planConfig];
+    if (!plan.priceId) {
+      toast({
+        title: "Error",
+        description: "Price ID not configured for this plan",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await onUpgradePlan(plan);
+      await createCheckoutSession(plan.priceId, plan.name);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleManageSubscription = async () => {
+    if (!subscriptionData.subscribed) {
+      toast({
+        title: "No Active Subscription",
+        description: "You need an active subscription to access the customer portal",
+        variant: "destructive",
+      });
+      return;
+    }
+    await openCustomerPortal();
+  };
+
+  useEffect(() => {
+    // Check subscription status when component mounts
+    checkSubscription();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -109,6 +172,16 @@ const BillingSettings = ({
           <h2 className="text-2xl font-bold text-gray-900">Billing & Subscription</h2>
           <p className="text-gray-600">Manage your subscription and billing information</p>
         </div>
+        <Button 
+          onClick={checkSubscription} 
+          disabled={loading}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh Status
+        </Button>
       </div>
 
       {/* Current Plan */}
@@ -122,8 +195,8 @@ const BillingSettings = ({
                   {currentPlanConfig.name} Plan
                 </CardTitle>
                 <p className="text-sm text-gray-600">
-                  ${currentPrice}/{billingInfo.billingCycle === 'yearly' ? 'year' : 'month'}
-                  {billingInfo.billingCycle === 'yearly' && (
+                  ${currentPrice}/{(billingInfo?.billingCycle || 'monthly') === 'yearly' ? 'year' : 'month'}
+                  {(billingInfo?.billingCycle || 'monthly') === 'yearly' && currentPrice > 0 && (
                     <Badge className="ml-2 bg-green-100 text-green-700 border-0">
                       Save 17%
                     </Badge>
@@ -142,11 +215,11 @@ const BillingSettings = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Properties</span>
                 <span className="text-sm text-gray-600">
-                  {billingInfo.currentUsage.properties}/{billingInfo.planLimits.properties === -1 ? '∞' : billingInfo.planLimits.properties}
+                  {billingInfo?.currentUsage.properties || 0}/{billingInfo?.planLimits.properties === -1 ? '∞' : billingInfo?.planLimits.properties || 0}
                 </span>
               </div>
               <Progress 
-                value={getUsagePercentage(billingInfo.currentUsage.properties, billingInfo.planLimits.properties)} 
+                value={getUsagePercentage(billingInfo?.currentUsage.properties || 0, billingInfo?.planLimits.properties || 0)} 
                 className="h-2" 
               />
             </div>
@@ -154,11 +227,11 @@ const BillingSettings = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Applications</span>
                 <span className="text-sm text-gray-600">
-                  {billingInfo.currentUsage.applications}/{billingInfo.planLimits.applications === -1 ? '∞' : billingInfo.planLimits.applications}
+                  {billingInfo?.currentUsage.applications || 0}/{billingInfo?.planLimits.applications === -1 ? '∞' : billingInfo?.planLimits.applications || 0}
                 </span>
               </div>
               <Progress 
-                value={getUsagePercentage(billingInfo.currentUsage.applications, billingInfo.planLimits.applications)} 
+                value={getUsagePercentage(billingInfo?.currentUsage.applications || 0, billingInfo?.planLimits.applications || 0)} 
                 className="h-2" 
               />
             </div>
@@ -166,11 +239,11 @@ const BillingSettings = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Storage</span>
                 <span className="text-sm text-gray-600">
-                  {(billingInfo.currentUsage.storage / 1024).toFixed(1)}GB/{billingInfo.planLimits.storage === -1 ? '∞' : (billingInfo.planLimits.storage / 1024).toFixed(0)}GB
+                  {((billingInfo?.currentUsage.storage || 0) / 1024).toFixed(1)}GB/{(billingInfo?.planLimits.storage || 0) === -1 ? '∞' : ((billingInfo?.planLimits.storage || 0) / 1024).toFixed(0)}GB
                 </span>
               </div>
               <Progress 
-                value={getUsagePercentage(billingInfo.currentUsage.storage, billingInfo.planLimits.storage)} 
+                value={getUsagePercentage(billingInfo?.currentUsage.storage || 0, billingInfo?.planLimits.storage || 0)} 
                 className="h-2" 
               />
             </div>
@@ -188,36 +261,21 @@ const BillingSettings = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {billingInfo.paymentMethod ? (
+            {subscriptionData.subscribed ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded text-white text-xs flex items-center justify-center font-bold">
-                      {billingInfo.paymentMethod.brand.toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-medium">•••• •••• •••• {billingInfo.paymentMethod.last4}</p>
-                      <p className="text-sm text-gray-500">
-                        Expires {billingInfo.paymentMethod.expiryMonth}/{billingInfo.paymentMethod.expiryYear}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={onUpdatePaymentMethod}>
-                    Update
-                  </Button>
-                </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Calendar size={14} />
-                  <span>Next billing date: {formatDate(billingInfo.nextBillingDate)}</span>
+                  <span>Next billing date: {formatDate(subscriptionData.subscription_end)}</span>
                 </div>
+                <Button onClick={handleManageSubscription} className="w-full bg-[#0C6E5F] hover:bg-[#0C6E5F]/90">
+                  Manage Subscription
+                </Button>
               </div>
             ) : (
               <div className="text-center py-4">
                 <AlertTriangle size={32} className="mx-auto text-amber-500 mb-2" />
-                <p className="text-sm text-gray-600 mb-3">No payment method on file</p>
-                <Button onClick={onUpdatePaymentMethod} className="bg-[#0C6E5F] hover:bg-[#0C6E5F]/90">
-                  Add Payment Method
-                </Button>
+                <p className="text-sm text-gray-600 mb-3">No active subscription</p>
+                <p className="text-xs text-gray-500">Subscribe to a plan to manage payment methods</p>
               </div>
             )}
           </CardContent>
@@ -232,11 +290,11 @@ const BillingSettings = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Button variant="outline" onClick={onViewInvoices} className="w-full">
+              <Button variant="outline" onClick={handleManageSubscription} className="w-full">
                 View All Invoices
               </Button>
               <div className="text-center">
-                <p className="text-sm text-gray-500">Download receipts and manage billing history</p>
+                <p className="text-sm text-gray-500">Access billing history through the customer portal</p>
               </div>
             </div>
           </CardContent>
@@ -244,7 +302,7 @@ const BillingSettings = ({
       </div>
 
       {/* Upgrade Options */}
-      {billingInfo.currentPlan !== 'enterprise' && (
+      {currentPlan !== 'enterprise' && (
         <Card className="border-0 shadow-md">
           <CardHeader>
             <CardTitle>Upgrade Your Plan</CardTitle>
@@ -253,7 +311,7 @@ const BillingSettings = ({
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(planConfig).map(([key, plan]) => {
-                if (key === billingInfo.currentPlan) return null;
+                if (key === currentPlan || key === 'free') return null;
                 
                 return (
                   <div key={key} className={`p-4 rounded-lg border-2 ${plan.color}`}>
@@ -275,10 +333,10 @@ const BillingSettings = ({
                     </ul>
                     <Button
                       onClick={() => handleUpgrade(key)}
-                      disabled={isLoading}
+                      disabled={isLoading || loading}
                       className="w-full bg-[#0C6E5F] hover:bg-[#0C6E5F]/90"
                     >
-                      Upgrade to {plan.name}
+                      {isLoading || loading ? 'Loading...' : `Upgrade to ${plan.name}`}
                     </Button>
                   </div>
                 );
@@ -289,22 +347,24 @@ const BillingSettings = ({
       )}
 
       {/* Danger Zone */}
-      <Card className="border-red-200 shadow-md">
-        <CardHeader>
-          <CardTitle className="text-red-700">Danger Zone</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium text-red-700">Cancel Subscription</h4>
-              <p className="text-sm text-gray-600">Permanently cancel your subscription and lose access to all features</p>
+      {subscriptionData.subscribed && (
+        <Card className="border-red-200 shadow-md">
+          <CardHeader>
+            <CardTitle className="text-red-700">Danger Zone</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-red-700">Cancel Subscription</h4>
+                <p className="text-sm text-gray-600">Manage your subscription through the customer portal</p>
+              </div>
+              <Button variant="outline" onClick={handleManageSubscription} className="border-red-300 text-red-700 hover:bg-red-50">
+                Manage Subscription
+              </Button>
             </div>
-            <Button variant="outline" onClick={onCancelSubscription} className="border-red-300 text-red-700 hover:bg-red-50">
-              Cancel Subscription
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
