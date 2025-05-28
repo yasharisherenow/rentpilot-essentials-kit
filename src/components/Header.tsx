@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,7 @@ const Header = () => {
             Contact
           </Link>
           <Button asChild variant="default" className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-yellow-500/25">
-            <Link to="/application">Get Started</Link>
+            <Link to="/auth">Get Started</Link>
           </Button>
         </nav>
 
@@ -82,7 +81,7 @@ const Header = () => {
             className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold w-full transition-all duration-200 hover:scale-105"
             onClick={() => setIsMenuOpen(false)}
           >
-            <Link to="/application">Get Started</Link>
+            <Link to="/auth">Get Started</Link>
           </Button>
         </nav>
       )}

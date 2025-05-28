@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -55,6 +54,8 @@ const LandlordDashboard = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [leases, setLeases] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddProperty, setShowAddProperty] = useState(false);
+  const [showCreateLease, setShowCreateLease] = useState(false);
 
   useEffect(() => {
     if (!user || !profile) return;
@@ -244,13 +245,7 @@ const LandlordDashboard = () => {
             </p>
           </div>
           <div className="flex gap-3 mt-4 md:mt-0 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-            <Button variant="outline" size="sm" className="flex items-center gap-2 bg-slate-800/50 border-slate-700/50 text-slate-300 hover:bg-slate-700/50 hover:border-yellow-400/50 hover:text-yellow-400 transition-all duration-200">
-              <Bell size={16} />
-              <span className="hidden sm:inline">Notifications</span>
-              <Badge className="bg-yellow-500 text-slate-900 text-xs px-1 ml-1">
-                3
-              </Badge>
-            </Button>
+            <NotificationsDropdown />
             <Button variant="outline" size="sm" onClick={() => signOut()} className="bg-slate-800/50 border-slate-700/50 text-slate-300 hover:bg-slate-700/50 hover:border-red-400/50 hover:text-red-400 transition-all duration-200">
               <User size={16} />
               <span className="hidden sm:inline">Sign Out</span>
@@ -284,56 +279,14 @@ const LandlordDashboard = () => {
           </TabsList>
           
           <TabsContent value="overview" className="space-y-8">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-up" style={{ animationDelay: '0.3s' }}>
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-400">Total Rent</CardTitle>
-                  <DollarSign className="h-4 w-4 text-yellow-400 group-hover:scale-110 transition-transform duration-200" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white">${portfolioStats.totalRent.toLocaleString()}</div>
-                  <p className="text-xs text-slate-500 mt-1">+12% from last month</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-400">Properties</CardTitle>
-                  <Building className="h-4 w-4 text-yellow-400 group-hover:scale-110 transition-transform duration-200" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white">{portfolioStats.totalProperties}</div>
-                  <p className="text-xs text-slate-500 mt-1">{portfolioStats.occupiedUnits} occupied, {portfolioStats.vacantUnits} vacant</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-400">Applications</CardTitle>
-                  <FileText className="h-4 w-4 text-yellow-400 group-hover:scale-110 transition-transform duration-200" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white">{portfolioStats.pendingApplications}</div>
-                  <p className="text-xs text-slate-500 mt-1">Pending review</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-400">Active Leases</CardTitle>
-                  <Users className="h-4 w-4 text-yellow-400 group-hover:scale-110 transition-transform duration-200" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white">{portfolioStats.activeLeases}</div>
-                  <p className="text-xs text-slate-500 mt-1">2 expiring soon</p>
-                </CardContent>
-              </Card>
-            </div>
+            <AnalyticsPanel />
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-up" style={{ animationDelay: '0.4s' }}>
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer hover:scale-105">
+              <Card 
+                className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer hover:scale-105"
+                onClick={() => setShowAddProperty(true)}
+              >
                 <CardHeader className="text-center">
                   <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-all duration-200">
                     <Home className="text-yellow-400 group-hover:scale-110 transition-transform duration-200" size={32} />
@@ -349,7 +302,10 @@ const LandlordDashboard = () => {
                 </CardContent>
               </Card>
               
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer hover:scale-105">
+              <Card 
+                className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer hover:scale-105"
+                onClick={() => setShowCreateLease(true)}
+              >
                 <CardHeader className="text-center">
                   <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-all duration-200">
                     <FileText className="text-yellow-400 group-hover:scale-110 transition-transform duration-200" size={32} />
@@ -358,11 +314,9 @@ const LandlordDashboard = () => {
                   <CardDescription className="text-slate-400">Generate legal documents</CardDescription>
                 </CardHeader>
                 <CardContent className="text-center">
-                  <Button asChild className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold transition-all duration-200 hover:scale-105">
-                    <Link to="/lease">
-                      <Plus size={16} className="mr-2" />
-                      Create Lease
-                    </Link>
+                  <Button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold transition-all duration-200 hover:scale-105">
+                    <Plus size={16} className="mr-2" />
+                    Create Lease
                   </Button>
                 </CardContent>
               </Card>
@@ -383,73 +337,6 @@ const LandlordDashboard = () => {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up" style={{ animationDelay: '0.5s' }}>
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-lg text-white flex items-center gap-2">
-                    <Clock size={20} className="text-yellow-400" />
-                    Recent Activity
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-xl">
-                    <CheckCircle size={16} className="text-green-400" />
-                    <div className="flex-1">
-                      <p className="text-sm text-white">New application received</p>
-                      <p className="text-xs text-slate-400">2 hours ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-xl">
-                    <AlertTriangle size={16} className="text-yellow-400" />
-                    <div className="flex-1">
-                      <p className="text-sm text-white">Lease expires in 30 days</p>
-                      <p className="text-xs text-slate-400">1 day ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-xl">
-                    <DollarSign size={16} className="text-green-400" />
-                    <div className="flex-1">
-                      <p className="text-sm text-white">Rent payment received</p>
-                      <p className="text-xs text-slate-400">3 days ago</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-lg text-white flex items-center gap-2">
-                    <Calendar size={20} className="text-yellow-400" />
-                    Upcoming Tasks
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-xl">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white">Property inspection due</p>
-                      <p className="text-xs text-slate-400">Tomorrow</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-xl">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white">Lease renewal discussion</p>
-                      <p className="text-xs text-slate-400">Next week</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-xl">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white">Insurance renewal</p>
-                      <p className="text-xs text-slate-400">Next month</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
           
           <TabsContent value="properties" className="space-y-6">
@@ -464,7 +351,10 @@ const LandlordDashboard = () => {
                   <Filter size={16} className="mr-2" />
                   Filter
                 </Button>
-                <Button className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold">
+                <Button 
+                  onClick={() => setShowAddProperty(true)}
+                  className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold"
+                >
                   <Plus size={16} className="mr-2" />
                   Add Property
                 </Button>
@@ -520,7 +410,10 @@ const LandlordDashboard = () => {
                   <Home size={64} className="mx-auto text-slate-600 mb-6" />
                   <h3 className="text-xl font-semibold mb-2 text-white">No Properties Yet</h3>
                   <p className="text-slate-400 mb-6 max-w-md mx-auto">Start building your rental empire by adding your first property</p>
-                  <Button className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold">
+                  <Button 
+                    onClick={() => setShowAddProperty(true)}
+                    className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold"
+                  >
                     <Plus size={16} className="mr-2" />
                     Add Your First Property
                   </Button>
@@ -707,6 +600,31 @@ const LandlordDashboard = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Modals */}
+        {showAddProperty && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <AddPropertyForm 
+              onPropertyAdded={() => {
+                fetchProperties();
+                setShowAddProperty(false);
+              }} 
+              onClose={() => setShowAddProperty(false)} 
+            />
+          </div>
+        )}
+
+        {showCreateLease && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <CreateLeaseForm 
+              onLeaseCreated={() => {
+                fetchLeaseDocuments();
+                setShowCreateLease(false);
+              }} 
+              onClose={() => setShowCreateLease(false)} 
+            />
+          </div>
+        )}
       </div>
     </div>
   );
