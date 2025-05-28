@@ -365,6 +365,44 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          app_alerts: boolean
+          billing_alerts: boolean
+          created_at: string
+          lease_reminders: boolean
+          maintenance_alerts: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_alerts?: boolean
+          billing_alerts?: boolean
+          created_at?: string
+          lease_reminders?: boolean
+          maintenance_alerts?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_alerts?: boolean
+          billing_alerts?: boolean
+          created_at?: string
+          lease_reminders?: boolean
+          maintenance_alerts?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_url: string | null
