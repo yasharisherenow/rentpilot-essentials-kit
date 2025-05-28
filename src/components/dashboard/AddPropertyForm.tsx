@@ -39,7 +39,6 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
     bathrooms: '',
     square_feet: '',
     amenities: [] as string[],
-    property_group: '',
     description: ''
   });
 
@@ -63,6 +62,58 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
 
   const removePhoto = (index: number) => {
     setPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const validateForm = () => {
+    if (!formData.title.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Property title is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!formData.address.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Address is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!formData.city.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "City is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!formData.province.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Province is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!formData.postal_code.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Postal code is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!formData.monthly_rent || parseFloat(formData.monthly_rent) <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Valid monthly rent is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
   };
 
   const uploadPhotos = async (propertyId: string): Promise<string[]> => {
@@ -93,11 +144,23 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add a property",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateForm()) {
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      // Insert property first (without photos field)
+      // Insert property without the property_group field
       const { data: property, error } = await supabase
         .from('properties')
         .insert({
@@ -114,14 +177,16 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
           bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : null,
           square_feet: formData.square_feet ? parseInt(formData.square_feet) : null,
           amenities: formData.amenities,
-          property_group: formData.property_group || null,
           description: formData.description || null,
           is_available: true
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Property insert error:', error);
+        throw error;
+      }
 
       // Upload photos if any
       if (photos.length > 0) {
@@ -146,13 +211,31 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
         description: "Property added successfully!",
       });
 
+      // Clear form
+      setFormData({
+        title: '',
+        address: '',
+        city: '',
+        province: '',
+        postal_code: '',
+        unit_count: 1,
+        property_type: 'Apartment',
+        monthly_rent: '',
+        bedrooms: '',
+        bathrooms: '',
+        square_feet: '',
+        amenities: [],
+        description: ''
+      });
+      setPhotos([]);
+
       onPropertyAdded();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding property:', error);
       toast({
         title: "Error",
-        description: "Failed to add property",
+        description: error.message || "Failed to add property",
         variant: "destructive",
       });
     } finally {
@@ -161,10 +244,10 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-screen-md mx-auto my-8">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
         <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl">
-          <CardHeader>
+          <CardHeader className="flex-shrink-0">
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle className="text-2xl text-white">Add New Property</CardTitle>
@@ -178,7 +261,7 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
             </div>
           </CardHeader>
           
-          <CardContent className="max-h-[70vh] overflow-y-auto">
+          <CardContent className="flex-1 overflow-y-auto max-h-[calc(90vh-140px)]">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -380,7 +463,7 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
           </CardContent>
 
           {/* Sticky Submit Section */}
-          <div className="sticky bottom-0 bg-gradient-to-t from-slate-900 to-transparent p-6 border-t border-slate-700/50">
+          <div className="flex-shrink-0 bg-gradient-to-t from-slate-900 to-transparent p-6 border-t border-slate-700/50">
             <div className="flex gap-4">
               <Button
                 type="button"
