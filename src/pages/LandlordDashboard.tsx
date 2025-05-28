@@ -39,6 +39,9 @@ import NotificationsDropdown from '@/components/dashboard/NotificationsDropdown'
 import AnalyticsPanel from '@/components/dashboard/AnalyticsPanel';
 import AddPropertyForm from '@/components/dashboard/AddPropertyForm';
 import CreateLeaseForm from '@/components/dashboard/CreateLeaseForm';
+import ProfileSettings from '@/components/dashboard/ProfileSettings';
+import NotificationPreferences from '@/components/dashboard/NotificationPreferences';
+import BillingManagement from '@/components/dashboard/BillingManagement';
 
 type Application = {
   id: string;
@@ -556,51 +559,20 @@ const LandlordDashboard = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-lg text-white flex items-center gap-2">
-                    <User size={20} className="text-yellow-400" />
-                    Account Settings
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button variant="outline" className="w-full justify-start bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white">
-                    <Settings size={16} className="mr-2" />
-                    Profile Settings
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white">
-                    <Bell size={16} className="mr-2" />
-                    Notification Preferences
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white">
-                    <CreditCard size={16} className="mr-2" />
-                    Billing & Subscription
-                  </Button>
-                </CardContent>
-              </Card>
+              {/* Profile Settings */}
+              <div>
+                <ProfileSettings />
+              </div>
 
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-lg text-white flex items-center gap-2">
-                    <Settings size={20} className="text-yellow-400" />
-                    Application Settings
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button variant="outline" className="w-full justify-start bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white">
-                    <FolderOpen size={16} className="mr-2" />
-                    Document Templates
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white">
-                    <Users size={16} className="mr-2" />
-                    Team Management
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white">
-                    <Settings size={16} className="mr-2" />
-                    API Integration
-                  </Button>
-                </CardContent>
-              </Card>
+              {/* Notification Preferences */}
+              <div>
+                <NotificationPreferences />
+              </div>
+
+              {/* Billing Management */}
+              <div>
+                <BillingManagement />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
