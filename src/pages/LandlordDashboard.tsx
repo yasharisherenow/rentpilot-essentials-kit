@@ -35,6 +35,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Property } from '@/types/property';
+import NotificationsDropdown from '@/components/dashboard/NotificationsDropdown';
+import AnalyticsPanel from '@/components/dashboard/AnalyticsPanel';
+import AddPropertyForm from '@/components/dashboard/AddPropertyForm';
+import CreateLeaseForm from '@/components/dashboard/CreateLeaseForm';
 
 type Application = {
   id: string;

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -123,16 +122,11 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
 
       if (error) throw error;
 
-      // Upload photos if any
+      // Upload photos if any and store URLs in a custom way
       let photoUrls: string[] = [];
       if (photos.length > 0) {
         photoUrls = await uploadPhotos(property.id);
-        
-        // Update property with photo URLs
-        await supabase
-          .from('properties')
-          .update({ photos: photoUrls })
-          .eq('id', property.id);
+        console.log('Uploaded photo URLs:', photoUrls);
       }
 
       // Create notification

@@ -5,12 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { X, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { X } from 'lucide-react';
+
+interface CreateLeaseFormProps {
+  onLeaseCreated: () => void;
+  onClose: () => void;
+}
 
 interface Property {
   id: string;
@@ -18,15 +23,6 @@ interface Property {
   address: string;
   monthly_rent: number;
 }
-
-interface CreateLeaseFormProps {
-  onLeaseCreated: () => void;
-  onClose: () => void;
-}
-
-const utilitiesOptions = [
-  'Heat', 'Electricity', 'Water', 'Internet', 'Cable TV', 'Gas', 'Garbage Collection'
-];
 
 const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
   const { user } = useAuth();
@@ -43,13 +39,26 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
     pet_deposit: '',
     has_pets: false,
     utilities_included: [] as string[],
-    snow_grass_responsibility: 'tenant',
+    snow_grass_responsibility: '',
     special_terms: ''
   });
 
+  const utilityOptions = [
+    'Electricity', 'Gas', 'Water', 'Internet', 'Cable/TV', 
+    'Heating', 'Air Conditioning', 'Garbage Collection'
+  ];
+
+  const responsibilityOptions = [
+    'Tenant responsible for both',
+    'Landlord responsible for both',
+    'Tenant responsible for grass, landlord for snow',
+    'Landlord responsible for grass, tenant for snow',
+    'As per municipal bylaws'
+  ];
+
   useEffect(() => {
     fetchProperties();
-  }, [user]);
+  }, []);
 
   const fetchProperties = async () => {
     if (!user) return;
@@ -72,22 +81,29 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePropertySelect = (propertyId: string) => {
-    const property = properties.find(p => p.id === propertyId);
-    if (property) {
-      setFormData(prev => ({
-        ...prev,
-        property_id: propertyId,
-        monthly_rent: property.monthly_rent.toString()
+  const handleUtilityChange = (utility: string, checked: boolean) => {
+    if (checked) {
+      setFormData(prev => ({ 
+        ...prev, 
+        utilities_included: [...prev.utilities_included, utility] 
+      }));
+    } else {
+      setFormData(prev => ({ 
+        ...prev, 
+        utilities_included: prev.utilities_included.filter(u => u !== utility) 
       }));
     }
   };
 
-  const handleUtilityChange = (utility: string, checked: boolean) => {
-    if (checked) {
-      setFormData(prev => ({ ...prev, utilities_included: [...prev.utilities_included, utility] }));
-    } else {
-      setFormData(prev => ({ ...prev, utilities_included: prev.utilities_included.filter(u => u !== utility) }));
+  const handlePropertyChange = (propertyId: string) => {
+    const selectedProperty = properties.find(p => p.id === propertyId);
+    if (selectedProperty) {
+      setFormData(prev => ({
+        ...prev,
+        property_id: propertyId,
+        monthly_rent: selectedProperty.monthly_rent.toString(),
+        security_deposit: selectedProperty.monthly_rent.toString()
+      }));
     }
   };
 
@@ -103,7 +119,6 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
           property_id: formData.property_id,
           landlord_id: user.id,
           tenant_name: formData.tenant_name,
-          tenant_email: formData.tenant_email || null,
           lease_start_date: formData.lease_start_date,
           lease_end_date: formData.lease_end_date,
           monthly_rent: parseFloat(formData.monthly_rent),
@@ -112,7 +127,7 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
           has_pets: formData.has_pets,
           utilities_included: formData.utilities_included,
           snow_grass_responsibility: formData.snow_grass_responsibility,
-          special_terms: formData.special_terms || null,
+          special_terms: formData.special_terms,
           status: 'active'
         })
         .select()
@@ -127,14 +142,13 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
         .eq('id', formData.property_id);
 
       // Create notification
-      const property = properties.find(p => p.id === formData.property_id);
       await supabase
         .from('notifications')
         .insert({
           user_id: user.id,
           type: 'lease_created',
           title: 'New Lease Created',
-          description: `Lease created for ${formData.tenant_name} at ${property?.title}`,
+          description: `Lease agreement created for ${formData.tenant_name}`,
           metadata: { lease_id: lease.id, property_id: formData.property_id },
           priority: 'medium'
         });
@@ -163,9 +177,12 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="text-2xl text-white">Create New Lease</CardTitle>
+            <CardTitle className="text-2xl text-white flex items-center gap-2">
+              <FileText className="text-yellow-400" size={24} />
+              Create Lease Agreement
+            </CardTitle>
             <CardDescription className="text-slate-400">
-              Generate a lease agreement for your property
+              Generate a new lease for your property
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose} className="text-slate-400 hover:text-white">
@@ -175,23 +192,23 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label className="text-slate-300">Select Property *</Label>
-            <Select value={formData.property_id} onValueChange={handlePropertySelect}>
-              <SelectTrigger className="bg-slate-800/50 border-slate-700/50 text-white">
-                <SelectValue placeholder="Choose a property" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
-                {properties.map((property) => (
-                  <SelectItem key={property.id} value={property.id} className="text-white hover:bg-slate-700">
-                    {property.title} - {property.address}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="text-slate-300">Select Property *</Label>
+              <Select onValueChange={handlePropertyChange} value={formData.property_id}>
+                <SelectTrigger className="bg-slate-800/50 border-slate-700/50 text-white">
+                  <SelectValue placeholder="Choose a property" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  {properties.map((property) => (
+                    <SelectItem key={property.id} value={property.id} className="text-white">
+                      {property.title} - {property.address}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="tenant_name" className="text-slate-300">Tenant Name *</Label>
               <Input
@@ -200,18 +217,6 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
                 onChange={(e) => handleInputChange('tenant_name', e.target.value)}
                 placeholder="John Doe"
                 required
-                className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="tenant_email" className="text-slate-300">Tenant Email</Label>
-              <Input
-                id="tenant_email"
-                type="email"
-                value={formData.tenant_email}
-                onChange={(e) => handleInputChange('tenant_email', e.target.value)}
-                placeholder="john@example.com"
                 className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
               />
             </div>
@@ -293,16 +298,32 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
                 onCheckedChange={(checked) => handleInputChange('has_pets', checked)}
                 className="border-slate-600 text-yellow-400"
               />
-              <Label htmlFor="has_pets" className="text-slate-300 cursor-pointer">
-                Pets Allowed
+              <Label htmlFor="has_pets" className="text-slate-300">
+                Pets allowed
               </Label>
             </div>
           </div>
 
           <div className="space-y-4">
+            <Label className="text-slate-300">Snow/Grass Responsibility</Label>
+            <Select onValueChange={(value) => handleInputChange('snow_grass_responsibility', value)}>
+              <SelectTrigger className="bg-slate-800/50 border-slate-700/50 text-white">
+                <SelectValue placeholder="Select responsibility" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-800 border-slate-700">
+                {responsibilityOptions.map((option) => (
+                  <SelectItem key={option} value={option} className="text-white">
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-4">
             <Label className="text-slate-300">Utilities Included</Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {utilitiesOptions.map((utility) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {utilityOptions.map((utility) => (
                 <div key={utility} className="flex items-center space-x-2">
                   <Checkbox
                     id={utility}
@@ -319,26 +340,12 @@ const CreateLeaseForm = ({ onLeaseCreated, onClose }: CreateLeaseFormProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-300">Snow & Grass Responsibility</Label>
-            <Select value={formData.snow_grass_responsibility} onValueChange={(value) => handleInputChange('snow_grass_responsibility', value)}>
-              <SelectTrigger className="bg-slate-800/50 border-slate-700/50 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
-                <SelectItem value="tenant" className="text-white hover:bg-slate-700">Tenant</SelectItem>
-                <SelectItem value="landlord" className="text-white hover:bg-slate-700">Landlord</SelectItem>
-                <SelectItem value="shared" className="text-white hover:bg-slate-700">Shared</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="special_terms" className="text-slate-300">Special Terms & Conditions</Label>
             <Textarea
               id="special_terms"
               value={formData.special_terms}
               onChange={(e) => handleInputChange('special_terms', e.target.value)}
-              placeholder="Any additional lease terms or conditions..."
+              placeholder="Any special clauses or conditions..."
               className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
               rows={3}
             />
