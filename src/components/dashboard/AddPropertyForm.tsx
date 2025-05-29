@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -160,7 +159,6 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
 
     setIsSubmitting(true);
     try {
-      // Insert property without the property_group field
       const { data: property, error } = await supabase
         .from('properties')
         .insert({
@@ -188,13 +186,11 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
         throw error;
       }
 
-      // Upload photos if any
       if (photos.length > 0) {
         const photoUrls = await uploadPhotos(property.id);
         console.log('Uploaded photo URLs:', photoUrls);
       }
 
-      // Create notification
       await supabase
         .from('notifications')
         .insert({
@@ -211,7 +207,6 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
         description: "Property added successfully!",
       });
 
-      // Clear form
       setFormData({
         title: '',
         address: '',
@@ -245,8 +240,8 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
-        <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl">
+      <div className="w-full max-w-screen-md max-h-[90vh] flex flex-col">
+        <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl flex flex-col h-full">
           <CardHeader className="flex-shrink-0">
             <div className="flex justify-between items-center">
               <div>
@@ -261,8 +256,8 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
             </div>
           </CardHeader>
           
-          <CardContent className="flex-1 overflow-y-auto max-h-[calc(90vh-140px)]">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="title" className="text-slate-300">Property Name *</Label>
@@ -462,7 +457,6 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
             </form>
           </CardContent>
 
-          {/* Sticky Submit Section */}
           <div className="flex-shrink-0 bg-gradient-to-t from-slate-900 to-transparent p-6 border-t border-slate-700/50">
             <div className="flex gap-4">
               <Button

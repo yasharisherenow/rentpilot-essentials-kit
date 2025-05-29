@@ -42,6 +42,9 @@ import CreateLeaseForm from '@/components/dashboard/CreateLeaseForm';
 import ProfileSettings from '@/components/dashboard/ProfileSettings';
 import NotificationPreferences from '@/components/dashboard/NotificationPreferences';
 import BillingManagement from '@/components/dashboard/BillingManagement';
+import ViewPropertyModal from '@/components/dashboard/ViewPropertyModal';
+import DeletePropertyModal from '@/components/dashboard/DeletePropertyModal';
+import EditPropertyForm from '@/components/EditPropertyForm';
 
 type Application = {
   id: string;
@@ -63,6 +66,8 @@ const LandlordDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [showCreateLease, setShowCreateLease] = useState(false);
+  const [viewProperty, setViewProperty] = useState<Property | null>(null);
+  const [deleteProperty, setDeleteProperty] = useState<Property | null>(null);
 
   useEffect(() => {
     if (!user || !profile) return;
@@ -398,13 +403,26 @@ const LandlordDashboard = () => {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1 bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white"
+                          onClick={() => setViewProperty(property)}
+                        >
                           <Eye size={14} className="mr-2" />
                           View
                         </Button>
-                        <Button size="sm" variant="outline" className="flex-1 bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white">
-                          <Edit size={14} className="mr-2" />
-                          Edit
+                        <EditPropertyForm 
+                          property={property} 
+                          onPropertyUpdated={fetchProperties}
+                        />
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30 hover:text-red-300"
+                          onClick={() => setDeleteProperty(property)}
+                        >
+                          <Trash2 size={14} />
                         </Button>
                       </div>
                     </CardContent>
@@ -579,15 +597,10 @@ const LandlordDashboard = () => {
 
         {/* Modals */}
         {showAddProperty && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <AddPropertyForm 
-              onPropertyAdded={() => {
-                fetchProperties();
-                setShowAddProperty(false);
-              }} 
-              onClose={() => setShowAddProperty(false)} 
-            />
-          </div>
+          <AddPropertyForm 
+            onPropertyAdded={fetchProperties}
+            onClose={() => setShowAddProperty(false)} 
+          />
         )}
 
         {showCreateLease && (
@@ -600,6 +613,21 @@ const LandlordDashboard = () => {
               onClose={() => setShowCreateLease(false)} 
             />
           </div>
+        )}
+
+        {viewProperty && (
+          <ViewPropertyModal 
+            property={viewProperty}
+            onClose={() => setViewProperty(null)}
+          />
+        )}
+
+        {deleteProperty && (
+          <DeletePropertyModal 
+            property={deleteProperty}
+            onClose={() => setDeleteProperty(null)}
+            onPropertyDeleted={fetchProperties}
+          />
         )}
       </div>
     </div>

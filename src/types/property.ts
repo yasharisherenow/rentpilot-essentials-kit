@@ -13,4 +13,10 @@ export type Property = {
   unit_count?: number;
   created_at: string;
   landlord_id: string;
+  property_type?: string;
+  square_feet?: number;
+  amenities?: string[];
+  description?: string;
+  available_date?: string;
+  updated_at?: string;
 };
