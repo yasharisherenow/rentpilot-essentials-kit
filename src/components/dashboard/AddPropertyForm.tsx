@@ -239,13 +239,13 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-2xl max-h-[95vh] flex flex-col mx-auto">
         <Card className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl flex flex-col h-full">
-          <CardHeader className="flex-shrink-0 pb-4">
+          <CardHeader className="flex-shrink-0 pb-4 px-4 sm:px-6">
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="text-xl text-white">Add New Property</CardTitle>
+                <CardTitle className="text-lg sm:text-xl text-white">Add New Property</CardTitle>
                 <CardDescription className="text-slate-400 text-sm">
                   Add a property to your rental portfolio
                 </CardDescription>
@@ -256,9 +256,9 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
             </div>
           </CardHeader>
           
-          <CardContent className="flex-1 overflow-y-auto px-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="flex-1 overflow-y-auto px-4 sm:px-6">
+            <form onSubmit={handleSubmit} className="space-y-6 pb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="title" className="text-slate-300 text-sm">Property Name *</Label>
                   <Input
@@ -295,7 +295,7 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="city" className="text-slate-300 text-sm">City *</Label>
                   <Input
@@ -333,7 +333,7 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="monthly_rent" className="text-slate-300 text-sm">Monthly Rent *</Label>
                   <Input
@@ -388,7 +388,7 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
 
               <div className="space-y-3">
                 <Label className="text-slate-300 text-sm">Amenities</Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
                   {amenitiesList.map((amenity) => (
                     <div key={amenity} className="flex items-center space-x-2">
                       <Checkbox
@@ -397,7 +397,7 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                         onCheckedChange={(checked) => handleAmenityChange(amenity, checked as boolean)}
                         className="border-slate-600 text-yellow-400"
                       />
-                      <Label htmlFor={amenity} className="text-slate-300 text-xs cursor-pointer">
+                      <Label htmlFor={amenity} className="text-slate-300 text-xs cursor-pointer leading-tight">
                         {amenity}
                       </Label>
                     </div>
@@ -409,9 +409,9 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                 <Label className="text-slate-300 text-sm">Property Photos</Label>
                 <div className="space-y-3">
                   <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/30 hover:bg-slate-700/30 transition-all duration-200">
+                    <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/30 hover:bg-slate-700/30 transition-all duration-200">
                       <div className="flex flex-col items-center justify-center py-2">
-                        <Upload className="w-6 h-6 mb-1 text-slate-400" />
+                        <Upload className="w-5 h-5 mb-1 text-slate-400" />
                         <p className="text-xs text-slate-400">
                           <span className="font-semibold">Click to upload</span> photos
                         </p>
@@ -421,20 +421,20 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                   </div>
                   
                   {photos.length > 0 && (
-                    <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-2 max-h-24 overflow-y-auto">
                       {photos.map((photo, index) => (
                         <div key={index} className="relative group">
                           <img
                             src={URL.createObjectURL(photo)}
                             alt={`Property photo ${index + 1}`}
-                            className="w-full h-16 object-cover rounded-md"
+                            className="w-full h-14 object-cover rounded-md"
                           />
                           <button
                             type="button"
                             onClick={() => removePhoto(index)}
                             className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            <X size={10} />
+                            <X size={8} />
                           </button>
                         </div>
                       ))}
@@ -450,14 +450,14 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Beautiful property with modern amenities..."
-                  className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 min-h-[80px]"
+                  className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 min-h-[60px] resize-none"
                   rows={3}
                 />
               </div>
             </form>
           </CardContent>
 
-          <div className="flex-shrink-0 bg-gradient-to-t from-slate-900/90 to-transparent p-6 border-t border-slate-700/30">
+          <div className="flex-shrink-0 bg-gradient-to-t from-slate-900/90 to-transparent p-4 sm:p-6 border-t border-slate-700/30">
             <div className="flex gap-3">
               <Button
                 type="button"
