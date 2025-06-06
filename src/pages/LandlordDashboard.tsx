@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Property } from '@/types/property';
 import AddPropertyWizard from '@/components/dashboard/AddPropertyWizard';
+import AddLeaseForm from '@/components/dashboard/AddLeaseForm';
 import PropertyCard from '@/components/dashboard/PropertyCard';
 import ViewPropertyModal from '@/components/dashboard/ViewPropertyModal';
 import EditPropertyForm from '@/components/EditPropertyForm';
@@ -115,10 +115,13 @@ const LandlordDashboard = () => {
           <h1 className="text-3xl font-bold tracking-tight">Landlord Dashboard</h1>
           <p className="text-muted-foreground">Manage your rental properties and track performance</p>
         </div>
-        <Button onClick={() => setShowAddProperty(true)} className="bg-primary hover:bg-primary/90">
-          <PlusCircle className="mr-2" size={16} />
-          Add Property
-        </Button>
+        <div className="flex gap-3">
+          <AddLeaseForm onLeaseCreated={handlePropertyAdded} />
+          <Button onClick={() => setShowAddProperty(true)} className="bg-primary hover:bg-primary/90">
+            <PlusCircle className="mr-2" size={16} />
+            Add Property
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
