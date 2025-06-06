@@ -89,6 +89,17 @@ const LandlordDashboard = () => {
     setSelectedProperty(null);
   };
 
+  // Calculate portfolio stats
+  const portfolioStats = {
+    totalRent: properties.reduce((sum, prop) => sum + Number(prop.monthly_rent), 0),
+    totalProperties: properties.length,
+    occupiedUnits: properties.filter(p => !p.is_available).length,
+    vacantUnits: properties.filter(p => p.is_available).length,
+    pendingApplications: 0, // This would come from applications table
+    activeLeases: 0, // This would come from leases table
+    expiringLeases: 0, // This would come from leases table
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -121,8 +132,13 @@ const LandlordDashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <PortfolioOverview properties={properties} />
-          <EnhancedNotifications />
+          <PortfolioOverview stats={portfolioStats} />
+          <EnhancedNotifications 
+            notifications={[]}
+            onDismiss={() => {}}
+            onMarkAsRead={() => {}}
+            onClearAll={() => {}}
+          />
         </TabsContent>
 
         <TabsContent value="properties" className="space-y-6">
@@ -148,9 +164,10 @@ const LandlordDashboard = () => {
                 <PropertyCard
                   key={property.id}
                   property={property}
-                  onView={() => handleViewProperty(property)}
-                  onEdit={() => handleEditProperty(property)}
-                  onDelete={() => handleDeleteProperty(property)}
+                  applicationCount={0}
+                  onViewApplications={() => {}}
+                  onCreateLease={() => {}}
+                  onEditProperty={() => handleEditProperty(property)}
                 />
               ))}
             </div>
@@ -158,11 +175,21 @@ const LandlordDashboard = () => {
         </TabsContent>
 
         <TabsContent value="applications">
-          <ApplicationBoard />
+          <ApplicationBoard 
+            applications={[]}
+            onStatusChange={() => {}}
+            onCreateLease={() => {}}
+            onViewDetails={() => {}}
+          />
         </TabsContent>
 
         <TabsContent value="leases">
-          <LeaseManagement />
+          <LeaseManagement 
+            leases={[]}
+            onPreviewLease={() => {}}
+            onDownloadLease={() => {}}
+            onDuplicateLease={() => {}}
+          />
         </TabsContent>
 
         <TabsContent value="documents">
@@ -188,14 +215,6 @@ const LandlordDashboard = () => {
             setShowViewProperty(false);
             setSelectedProperty(null);
           }}
-          onEdit={() => {
-            setShowViewProperty(false);
-            setShowEditProperty(true);
-          }}
-          onDelete={() => {
-            setShowViewProperty(false);
-            setShowDeleteProperty(true);
-          }}
         />
       )}
 
@@ -203,17 +222,13 @@ const LandlordDashboard = () => {
         <EditPropertyForm
           property={selectedProperty}
           onPropertyUpdated={handlePropertyUpdated}
-          onClose={() => {
-            setShowEditProperty(false);
-            setSelectedProperty(null);
-          }}
         />
       )}
 
       {showDeleteProperty && selectedProperty && (
         <DeletePropertyModal
           property={selectedProperty}
-          onDelete={handlePropertyDeleted}
+          onPropertyDeleted={handlePropertyDeleted}
           onClose={() => {
             setShowDeleteProperty(false);
             setSelectedProperty(null);
