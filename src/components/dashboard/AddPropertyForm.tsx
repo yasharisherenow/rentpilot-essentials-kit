@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Upload, X, Plus } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 
 interface AddPropertyFormProps {
   onPropertyAdded: () => void;
@@ -240,102 +240,102 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-screen-md max-h-[90vh] flex flex-col">
-        <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl flex flex-col h-full">
-          <CardHeader className="flex-shrink-0">
+      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <Card className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl flex flex-col h-full">
+          <CardHeader className="flex-shrink-0 pb-4">
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="text-2xl text-white">Add New Property</CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardTitle className="text-xl text-white">Add New Property</CardTitle>
+                <CardDescription className="text-slate-400 text-sm">
                   Add a property to your rental portfolio
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" onClick={onClose} className="text-slate-400 hover:text-white">
-                <X size={20} />
+                <X size={18} />
               </Button>
             </div>
           </CardHeader>
           
-          <CardContent className="flex-1 overflow-y-auto">
+          <CardContent className="flex-1 overflow-y-auto px-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-slate-300">Property Name *</Label>
+                  <Label htmlFor="title" className="text-slate-300 text-sm">Property Name *</Label>
                   <Input
                     id="title"
                     value={formData.title}
                     onChange={(e) => handleInputChange('title', e.target.value)}
                     placeholder="Sunny Downtown Apartment"
                     required
-                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="property_type" className="text-slate-300">Property Type</Label>
+                  <Label htmlFor="property_type" className="text-slate-300 text-sm">Property Type</Label>
                   <Input
                     id="property_type"
                     value={formData.property_type}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
                     placeholder="Apartment, House, Condo"
-                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address" className="text-slate-300">Street Address *</Label>
+                <Label htmlFor="address" className="text-slate-300 text-sm">Street Address *</Label>
                 <Input
                   id="address"
                   value={formData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   placeholder="123 Main Street"
                   required
-                  className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                  className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="city" className="text-slate-300">City *</Label>
+                  <Label htmlFor="city" className="text-slate-300 text-sm">City *</Label>
                   <Input
                     id="city"
                     value={formData.city}
                     onChange={(e) => handleInputChange('city', e.target.value)}
                     placeholder="Toronto"
                     required
-                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="province" className="text-slate-300">Province *</Label>
+                  <Label htmlFor="province" className="text-slate-300 text-sm">Province *</Label>
                   <Input
                     id="province"
                     value={formData.province}
                     onChange={(e) => handleInputChange('province', e.target.value)}
                     placeholder="ON"
                     required
-                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="postal_code" className="text-slate-300">Postal Code *</Label>
+                  <Label htmlFor="postal_code" className="text-slate-300 text-sm">Postal Code *</Label>
                   <Input
                     id="postal_code"
                     value={formData.postal_code}
                     onChange={(e) => handleInputChange('postal_code', e.target.value)}
                     placeholder="M5V 3A8"
                     required
-                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="monthly_rent" className="text-slate-300">Monthly Rent *</Label>
+                  <Label htmlFor="monthly_rent" className="text-slate-300 text-sm">Monthly Rent *</Label>
                   <Input
                     id="monthly_rent"
                     type="number"
@@ -343,24 +343,24 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                     onChange={(e) => handleInputChange('monthly_rent', e.target.value)}
                     placeholder="2500"
                     required
-                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="bedrooms" className="text-slate-300">Bedrooms</Label>
+                  <Label htmlFor="bedrooms" className="text-slate-300 text-sm">Bedrooms</Label>
                   <Input
                     id="bedrooms"
                     type="number"
                     value={formData.bedrooms}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
                     placeholder="2"
-                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="bathrooms" className="text-slate-300">Bathrooms</Label>
+                  <Label htmlFor="bathrooms" className="text-slate-300 text-sm">Bathrooms</Label>
                   <Input
                     id="bathrooms"
                     type="number"
@@ -368,12 +368,12 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                     value={formData.bathrooms}
                     onChange={(e) => handleInputChange('bathrooms', e.target.value)}
                     placeholder="1.5"
-                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="unit_count" className="text-slate-300">Unit Count</Label>
+                  <Label htmlFor="unit_count" className="text-slate-300 text-sm">Unit Count</Label>
                   <Input
                     id="unit_count"
                     type="number"
@@ -381,14 +381,14 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                     onChange={(e) => handleInputChange('unit_count', parseInt(e.target.value))}
                     placeholder="1"
                     min="1"
-                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                    className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 h-9"
                   />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Label className="text-slate-300">Amenities</Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="space-y-3">
+                <Label className="text-slate-300 text-sm">Amenities</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {amenitiesList.map((amenity) => (
                     <div key={amenity} className="flex items-center space-x-2">
                       <Checkbox
@@ -397,7 +397,7 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                         onCheckedChange={(checked) => handleAmenityChange(amenity, checked as boolean)}
                         className="border-slate-600 text-yellow-400"
                       />
-                      <Label htmlFor={amenity} className="text-slate-300 text-sm cursor-pointer">
+                      <Label htmlFor={amenity} className="text-slate-300 text-xs cursor-pointer">
                         {amenity}
                       </Label>
                     </div>
@@ -405,15 +405,15 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Label className="text-slate-300">Property Photos</Label>
-                <div className="space-y-4">
+              <div className="space-y-3">
+                <Label className="text-slate-300 text-sm">Property Photos</Label>
+                <div className="space-y-3">
                   <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-700 border-dashed rounded-xl cursor-pointer bg-slate-800/30 hover:bg-slate-700/30 transition-all duration-200">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 mb-4 text-slate-400" />
-                        <p className="mb-2 text-sm text-slate-400">
-                          <span className="font-semibold">Click to upload</span> property photos
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/30 hover:bg-slate-700/30 transition-all duration-200">
+                      <div className="flex flex-col items-center justify-center py-2">
+                        <Upload className="w-6 h-6 mb-1 text-slate-400" />
+                        <p className="text-xs text-slate-400">
+                          <span className="font-semibold">Click to upload</span> photos
                         </p>
                       </div>
                       <input type="file" className="hidden" multiple accept="image/*" onChange={handlePhotoUpload} />
@@ -421,20 +421,20 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                   </div>
                   
                   {photos.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
                       {photos.map((photo, index) => (
                         <div key={index} className="relative group">
                           <img
                             src={URL.createObjectURL(photo)}
                             alt={`Property photo ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg"
+                            className="w-full h-16 object-cover rounded-md"
                           />
                           <button
                             type="button"
                             onClick={() => removePhoto(index)}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            <X size={12} />
+                            <X size={10} />
                           </button>
                         </div>
                       ))}
@@ -444,26 +444,26 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-slate-300">Description</Label>
+                <Label htmlFor="description" className="text-slate-300 text-sm">Description</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Beautiful property with modern amenities..."
-                  className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
+                  className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 min-h-[80px]"
                   rows={3}
                 />
               </div>
             </form>
           </CardContent>
 
-          <div className="flex-shrink-0 bg-gradient-to-t from-slate-900 to-transparent p-6 border-t border-slate-700/50">
-            <div className="flex gap-4">
+          <div className="flex-shrink-0 bg-gradient-to-t from-slate-900/90 to-transparent p-6 border-t border-slate-700/30">
+            <div className="flex gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1 bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50"
+                className="flex-1 bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 h-10"
               >
                 Cancel
               </Button>
@@ -471,9 +471,9 @@ const AddPropertyForm = ({ onPropertyAdded, onClose }: AddPropertyFormProps) => 
                 type="submit"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold"
+                className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-900 font-semibold h-10"
               >
-                {isSubmitting ? 'Adding Property...' : 'Add Property'}
+                {isSubmitting ? 'Adding...' : 'Add Property'}
               </Button>
             </div>
           </div>
