@@ -26,6 +26,7 @@ interface Property {
 }
 
 interface TenantInfo {
+  [key: string]: string;
   name: string;
   emergency_contact: string;
 }
@@ -209,6 +210,18 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
 
       setIsSubmitting(true);
 
+      // Prepare reminder settings with proper JSON serialization
+      const reminderSettings = {
+        rent_due_day: calculateRentDueDay(),
+        sublet_allowed: formData.sublet_allowed,
+        tenants: validTenants.map(tenant => ({
+          name: tenant.name,
+          emergency_contact: tenant.emergency_contact
+        })),
+        signature_name: formData.signature_name,
+        signature_date: formData.signature_date
+      };
+
       const { data: lease, error } = await supabase
         .from('leases')
         .insert({
@@ -224,13 +237,7 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
           special_terms: formData.lease_notes,
           status: 'active',
           utilities_included: formData.responsibilities,
-          reminder_settings: {
-            rent_due_day: calculateRentDueDay(),
-            sublet_allowed: formData.sublet_allowed,
-            tenants: validTenants,
-            signature_name: formData.signature_name,
-            signature_date: formData.signature_date
-          }
+          reminder_settings: reminderSettings as any
         })
         .select()
         .single();
@@ -243,6 +250,16 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
         .update({ is_available: false })
         .eq('id', formData.property_id);
 
+      // Prepare notification metadata with proper JSON serialization
+      const notificationMetadata = {
+        lease_id: lease.id,
+        property_id: formData.property_id,
+        tenants: validTenants.map(tenant => ({
+          name: tenant.name,
+          emergency_contact: tenant.emergency_contact
+        }))
+      };
+
       // Create notification
       await supabase
         .from('notifications')
@@ -251,11 +268,7 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
           type: 'lease_created',
           title: 'New Lease Created',
           description: `Lease agreement created and digitally signed by ${formData.signature_name}`,
-          metadata: { 
-            lease_id: lease.id, 
-            property_id: formData.property_id,
-            tenants: validTenants
-          },
+          metadata: notificationMetadata as any,
           priority: 'medium'
         });
 
