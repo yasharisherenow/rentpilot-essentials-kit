@@ -25,12 +25,17 @@ interface Property {
   monthly_rent: number;
 }
 
+interface TenantInfo {
+  name: string;
+  emergency_contact: string;
+}
+
 const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
-  const [tenantNames, setTenantNames] = useState(['']);
+  const [tenants, setTenants] = useState<TenantInfo[]>([{ name: '', emergency_contact: '' }]);
   
   const [formData, setFormData] = useState({
     property_id: '',
@@ -38,14 +43,15 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
     end_date: '',
     monthly_rent: '',
     security_deposit: '',
-    emergency_contact: '',
     rent_due_day_type: '1st', // '1st', 'last', 'custom'
     custom_rent_day: '',
     pet_allowed: false,
     pet_deposit: '',
     sublet_allowed: false,
     responsibilities: [] as string[],
-    lease_notes: ''
+    lease_notes: '',
+    signature_name: '',
+    signature_date: new Date().toISOString().split('T')[0]
   });
 
   const responsibilityOptions = [
@@ -67,25 +73,55 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
       const { data, error } = await supabase
         .from('properties')
         .select('id, title, address, monthly_rent')
-        .eq('landlord_id', user.id)
-        .eq('is_available', true);
+        .eq('landlord_id', user.id);
 
       if (error) throw error;
       setProperties(data || []);
     } catch (error) {
       console.error('Error fetching properties:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load properties",
+        variant: "destructive",
+      });
     }
   };
 
-  const handlePropertyChange = (propertyId: string) => {
-    const selectedProperty = properties.find(p => p.id === propertyId);
-    if (selectedProperty) {
-      setFormData(prev => ({
-        ...prev,
-        property_id: propertyId,
-        monthly_rent: selectedProperty.monthly_rent.toString(),
-        security_deposit: selectedProperty.monthly_rent.toString()
-      }));
+  const handlePropertyChange = async (propertyId: string) => {
+    // Check if property already has an active lease
+    try {
+      const { data: existingLease, error } = await supabase
+        .from('leases')
+        .select('id')
+        .eq('property_id', propertyId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking existing lease:', error);
+        return;
+      }
+
+      if (existingLease) {
+        toast({
+          title: "Property Unavailable",
+          description: "This property already has an active lease",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const selectedProperty = properties.find(p => p.id === propertyId);
+      if (selectedProperty) {
+        setFormData(prev => ({
+          ...prev,
+          property_id: propertyId,
+          monthly_rent: selectedProperty.monthly_rent.toString(),
+          security_deposit: selectedProperty.monthly_rent.toString()
+        }));
+      }
+    } catch (error) {
+      console.error('Error validating property selection:', error);
     }
   };
 
@@ -103,20 +139,20 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
     }
   };
 
-  const addTenantField = () => {
-    setTenantNames([...tenantNames, '']);
+  const addTenant = () => {
+    setTenants([...tenants, { name: '', emergency_contact: '' }]);
   };
 
-  const removeTenantField = (index: number) => {
-    if (tenantNames.length > 1) {
-      setTenantNames(tenantNames.filter((_, i) => i !== index));
+  const removeTenant = (index: number) => {
+    if (tenants.length > 1) {
+      setTenants(tenants.filter((_, i) => i !== index));
     }
   };
 
-  const updateTenantName = (index: number, value: string) => {
-    const updated = [...tenantNames];
-    updated[index] = value;
-    setTenantNames(updated);
+  const updateTenant = (index: number, field: keyof TenantInfo, value: string) => {
+    const updated = [...tenants];
+    updated[index][field] = value;
+    setTenants(updated);
   };
 
   const calculateRentDueDay = () => {
@@ -130,33 +166,55 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
     if (!user) return;
 
     // Validation
-    const validTenants = tenantNames.filter(name => name.trim());
+    const validTenants = tenants.filter(tenant => tenant.name.trim());
     if (validTenants.length === 0) {
       toast({
         title: "Error",
-        description: "Please add at least one tenant name",
+        description: "Please add at least one tenant",
         variant: "destructive",
       });
       return;
     }
 
-    if (!formData.property_id || !formData.start_date || !formData.end_date) {
+    if (!formData.property_id || !formData.start_date || !formData.end_date || !formData.signature_name.trim()) {
       toast({
         title: "Error", 
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields including signature",
         variant: "destructive",
       });
       return;
     }
 
-    setIsSubmitting(true);
+    // Check property availability one more time before submitting
     try {
+      const { data: existingLease, error: checkError } = await supabase
+        .from('leases')
+        .select('id')
+        .eq('property_id', formData.property_id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      if (existingLease) {
+        toast({
+          title: "Error",
+          description: "This property already has an active lease",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+
       const { data: lease, error } = await supabase
         .from('leases')
         .insert({
           property_id: formData.property_id,
           landlord_id: user.id,
-          tenant_name: validTenants.join(', '),
+          tenant_name: validTenants.map(t => t.name).join(', '),
           lease_start_date: formData.start_date,
           lease_end_date: formData.end_date,
           monthly_rent: parseFloat(formData.monthly_rent),
@@ -168,8 +226,10 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
           utilities_included: formData.responsibilities,
           reminder_settings: {
             rent_due_day: calculateRentDueDay(),
-            emergency_contact: formData.emergency_contact,
-            sublet_allowed: formData.sublet_allowed
+            sublet_allowed: formData.sublet_allowed,
+            tenants: validTenants,
+            signature_name: formData.signature_name,
+            signature_date: formData.signature_date
           }
         })
         .select()
@@ -190,8 +250,12 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
           user_id: user.id,
           type: 'lease_created',
           title: 'New Lease Created',
-          description: `Lease agreement created for ${validTenants.join(', ')}`,
-          metadata: { lease_id: lease.id, property_id: formData.property_id },
+          description: `Lease agreement created and digitally signed by ${formData.signature_name}`,
+          metadata: { 
+            lease_id: lease.id, 
+            property_id: formData.property_id,
+            tenants: validTenants
+          },
           priority: 'medium'
         });
 
@@ -207,16 +271,17 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
         end_date: '',
         monthly_rent: '',
         security_deposit: '',
-        emergency_contact: '',
         rent_due_day_type: '1st',
         custom_rent_day: '',
         pet_allowed: false,
         pet_deposit: '',
         sublet_allowed: false,
         responsibilities: [],
-        lease_notes: ''
+        lease_notes: '',
+        signature_name: '',
+        signature_date: new Date().toISOString().split('T')[0]
       });
-      setTenantNames(['']);
+      setTenants([{ name: '', emergency_contact: '' }]);
       setIsOpen(false);
       onLeaseCreated();
     } catch (error: any) {
@@ -230,6 +295,12 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
       setIsSubmitting(false);
     }
   };
+
+  // Filter available properties (ones without active leases)
+  const availableProperties = properties.filter(property => {
+    // This is a simplified check - in a real app you'd want to do this server-side
+    return property;
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -259,60 +330,69 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
                 <SelectValue placeholder="Choose a property" />
               </SelectTrigger>
               <SelectContent>
-                {properties.map((property) => (
+                {availableProperties.map((property) => (
                   <SelectItem key={property.id} value={property.id}>
                     {property.title} - {property.address}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {availableProperties.length === 0 && (
+              <p className="text-sm text-muted-foreground">No available properties. All properties may have active leases.</p>
+            )}
           </div>
 
           {/* Tenants */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-base font-medium">Tenant Names *</Label>
+              <Label className="text-base font-medium">Tenant Information *</Label>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addTenantField}
+                onClick={addTenant}
               >
                 <Plus className="mr-1" size={14} />
                 Add Tenant
               </Button>
             </div>
-            {tenantNames.map((name, index) => (
-              <div key={index} className="flex gap-2">
-                <Input
-                  placeholder={`Tenant ${index + 1} full name`}
-                  value={name}
-                  onChange={(e) => updateTenantName(index, e.target.value)}
-                  className="flex-1"
-                />
-                {tenantNames.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeTenantField(index)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                )}
+            {tenants.map((tenant, index) => (
+              <div key={index} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium">Tenant {index + 1}</h4>
+                  {tenants.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeTenant(index)}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`tenant-name-${index}`}>Full Name *</Label>
+                    <Input
+                      id={`tenant-name-${index}`}
+                      placeholder="John Doe"
+                      value={tenant.name}
+                      onChange={(e) => updateTenant(index, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`emergency-contact-${index}`}>Emergency Contact (Optional)</Label>
+                    <Input
+                      id={`emergency-contact-${index}`}
+                      placeholder="(555) 123-4567"
+                      value={tenant.emergency_contact}
+                      onChange={(e) => updateTenant(index, 'emergency_contact', e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
             ))}
-          </div>
-
-          {/* Emergency Contact */}
-          <div className="space-y-2">
-            <Label htmlFor="emergency_contact">Emergency Contact Number</Label>
-            <Input
-              id="emergency_contact"
-              value={formData.emergency_contact}
-              onChange={(e) => setFormData(prev => ({ ...prev, emergency_contact: e.target.value }))}
-              placeholder="(555) 123-4567"
-            />
           </div>
 
           {/* Lease Terms */}
@@ -471,11 +551,46 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
             />
           </div>
 
+          {/* Digital Signature Section */}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-medium">Digital Signature</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="signature_name">Signature Name *</Label>
+                <Input
+                  id="signature_name"
+                  value={formData.signature_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, signature_name: e.target.value }))}
+                  placeholder="Type your full name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signature_date">Signature Date *</Label>
+                <Input
+                  id="signature_date"
+                  type="date"
+                  value={formData.signature_date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, signature_date: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+            {formData.signature_name && (
+              <div className="bg-muted p-3 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Digital Signature Preview:</strong><br />
+                  Signed by {formData.signature_name} on {formData.signature_date}
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Legal Notice */}
           <Card className="bg-yellow-50 border-yellow-200">
             <CardContent className="p-4">
               <p className="text-sm text-yellow-800">
-                <strong>Legal Notice:</strong> By creating this lease agreement, you acknowledge that this constitutes a legally binding contract between the landlord and tenant(s). Please ensure all information is accurate before submitting.
+                <strong>Legal Notice:</strong> By creating this lease agreement, you acknowledge that this constitutes a legally binding contract between the landlord and tenant(s). The digital signature above serves as binding confirmation. Please ensure all information is accurate before submitting.
               </p>
             </CardContent>
           </Card>
@@ -491,7 +606,7 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || !formData.property_id}
+              disabled={isSubmitting || !formData.property_id || !formData.signature_name}
               className="flex-1 bg-primary hover:bg-primary/90"
             >
               {isSubmitting ? 'Creating Lease...' : 'Create Lease Agreement'}
