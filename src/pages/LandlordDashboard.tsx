@@ -19,6 +19,7 @@ import AnalyticsPanel from '@/components/dashboard/AnalyticsPanel';
 import LeaseManagement from '@/components/dashboard/LeaseManagement';
 import DocumentManager from '@/components/dashboard/DocumentManager';
 import EnhancedNotifications from '@/components/dashboard/EnhancedNotifications';
+import LandlordSettings from '@/pages/LandlordSettings';
 
 const LandlordDashboard = () => {
   const { user } = useAuth();
@@ -125,13 +126,14 @@ const LandlordDashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="properties">Properties</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="leases">Leases</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -201,6 +203,10 @@ const LandlordDashboard = () => {
 
         <TabsContent value="analytics">
           <AnalyticsPanel />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <LandlordSettings />
         </TabsContent>
       </Tabs>
 
