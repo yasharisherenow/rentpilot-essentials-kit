@@ -107,7 +107,7 @@ const SubscriptionManagement = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-slate-400 text-sm">Account Created</p>
-              <p className="text-slate-300">{formatDate(profile?.account_created_at || null)}</p>
+              <p className="text-slate-300">{formatDate(profile?.created_at || null)}</p>
             </div>
             <div>
               <p className="text-slate-400 text-sm">Account Type</p>
