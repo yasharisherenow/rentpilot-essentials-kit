@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { CreditCard, ExternalLink, RefreshCw } from 'lucide-react';
+import { CreditCard, ExternalLink, RefreshCw, User } from 'lucide-react';
 
 const SubscriptionManagement = () => {
   const { profile } = useAuth();
@@ -98,7 +98,10 @@ const SubscriptionManagement = () => {
       {/* Account Information */}
       <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl">
         <CardHeader>
-          <CardTitle className="text-lg text-white">Account Information</CardTitle>
+          <CardTitle className="text-lg text-white flex items-center gap-2">
+            <User size={20} className="text-yellow-400" />
+            Account Information
+          </CardTitle>
           <CardDescription className="text-slate-400">
             Basic account details
           </CardDescription>
@@ -106,14 +109,22 @@ const SubscriptionManagement = () => {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-slate-400 text-sm">Account Created</p>
-              <p className="text-slate-300">{formatDate(profile?.created_at || null)}</p>
+              <p className="text-slate-400 text-sm">Email Address</p>
+              <p className="text-slate-300">{profile?.email || 'N/A'}</p>
             </div>
             <div>
               <p className="text-slate-400 text-sm">Account Type</p>
               <p className="text-slate-300 capitalize">{profile?.role || 'Landlord'}</p>
             </div>
           </div>
+          {(profile?.first_name || profile?.last_name) && (
+            <div className="pt-2 border-t border-slate-700/50">
+              <p className="text-slate-400 text-sm">Full Name</p>
+              <p className="text-slate-300">
+                {[profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'N/A'}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
