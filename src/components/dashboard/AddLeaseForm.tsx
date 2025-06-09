@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +35,7 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [availableProperties, setAvailableProperties] = useState<Property[]>([]);
   const [tenants, setTenants] = useState<TenantInfo[]>([{ name: '', emergency_contact: '' }]);
   
   const [formData, setFormData] = useState({
@@ -71,13 +71,42 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // First, get all properties owned by the landlord
+      const { data: allProperties, error: propertiesError } = await supabase
         .from('properties')
         .select('id, title, address, monthly_rent')
         .eq('landlord_id', user.id);
 
-      if (error) throw error;
-      setProperties(data || []);
+      if (propertiesError) throw propertiesError;
+      
+      const propertiesList = allProperties || [];
+      setProperties(propertiesList);
+
+      // Then, get all active leases to filter out occupied properties
+      const { data: activeLeases, error: leasesError } = await supabase
+        .from('leases')
+        .select('property_id')
+        .eq('landlord_id', user.id)
+        .eq('status', 'active');
+
+      if (leasesError) throw leasesError;
+
+      // Create a set of property IDs that have active leases
+      const occupiedPropertyIds = new Set(
+        (activeLeases || []).map(lease => lease.property_id)
+      );
+
+      // Filter out properties that have active leases
+      const available = propertiesList.filter(
+        property => !occupiedPropertyIds.has(property.id)
+      );
+
+      setAvailableProperties(available);
+      
+      console.log('Total properties:', propertiesList.length);
+      console.log('Properties with active leases:', occupiedPropertyIds.size);
+      console.log('Available properties:', available.length);
+
     } catch (error) {
       console.error('Error fetching properties:', error);
       toast({
@@ -89,7 +118,7 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
   };
 
   const handlePropertyChange = async (propertyId: string) => {
-    // Check if property already has an active lease
+    // Double-check if property already has an active lease
     try {
       const { data: existingLease, error } = await supabase
         .from('leases')
@@ -112,7 +141,7 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
         return;
       }
 
-      const selectedProperty = properties.find(p => p.id === propertyId);
+      const selectedProperty = availableProperties.find(p => p.id === propertyId);
       if (selectedProperty) {
         setFormData(prev => ({
           ...prev,
@@ -309,12 +338,6 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
     }
   };
 
-  // Filter available properties (ones without active leases)
-  const availableProperties = properties.filter(property => {
-    // This is a simplified check - in a real app you'd want to do this server-side
-    return property;
-  });
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -350,8 +373,15 @@ const AddLeaseForm = ({ onLeaseCreated }: AddLeaseFormProps) => {
                 ))}
               </SelectContent>
             </Select>
-            {availableProperties.length === 0 && (
-              <p className="text-sm text-muted-foreground">No available properties. All properties may have active leases.</p>
+            {availableProperties.length === 0 && properties.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                All your properties currently have active leases. No properties available for new leases.
+              </p>
+            )}
+            {properties.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No properties found. Please add a property first before creating a lease.
+              </p>
             )}
           </div>
 
