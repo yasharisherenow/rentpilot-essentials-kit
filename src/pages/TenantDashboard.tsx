@@ -1,179 +1,113 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Home, FileText, User, Bell, AlertCircle } from 'lucide-react';
+import { 
+  Home, 
+  FileText, 
+  MessageCircle, 
+  Calendar, 
+  Phone, 
+  Settings, 
+  Download,
+  DollarSign,
+  MapPin,
+  Clock,
+  User,
+  Bell,
+  LogOut
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import AccountManagement from '@/components/AccountManagement';
-
-type Property = {
-  id: string;
-  title: string;
-  address: string;
-  city: string;
-  province: string;
-  postal_code: string;
-  monthly_rent: number;
-  bedrooms?: number;
-  bathrooms?: number;
-};
-
-type Application = {
-  id: string;
-  property: string;
-  property_id: string;
-  date: string;
-  status: 'pending' | 'approved' | 'rejected';
-  email: string;
-  phone: string;
-};
+import LeaseMessaging from '@/components/messaging/LeaseMessaging';
+import TenantDocuments from '@/components/tenant/TenantDocuments';
+import TenantSettings from '@/components/tenant/TenantSettings';
+import { useMessages } from '@/hooks/useMessages';
 
 type Lease = {
   id: string;
-  property_title: string;
+  property_id: string;
   tenant_name: string;
   monthly_rent: number;
+  security_deposit: number;
+  pet_deposit: number;
   lease_start_date: string;
   lease_end_date: string;
   status: string;
+  utilities_included: string[];
+  special_terms: string;
+  snow_grass_responsibility: string;
+  property?: {
+    title: string;
+    address: string;
+    city: string;
+    province: string;
+  };
+  landlord?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+  };
 };
 
 const TenantDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const [availableProperties, setAvailableProperties] = useState<Property[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [leases, setLeases] = useState<Lease[]>([]);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [lease, setLease] = useState<Lease | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { unreadCount } = useMessages(lease?.id);
 
   useEffect(() => {
     if (!user || !profile) return;
-
-    const loadTenantData = async () => {
-      try {
-        setIsLoading(true);
-        await Promise.all([
-          fetchAvailableProperties(),
-          fetchTenantApplications(),
-          fetchTenantLeases(),
-        ]);
-      } catch (error) {
-        console.error("Error loading tenant data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadTenantData();
+    fetchTenantLease();
   }, [user, profile]);
 
-  const fetchAvailableProperties = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('properties')
-        .select('*')
-        .eq('is_available', true)
-        .limit(5);
-
-      if (error) throw error;
-
-      const formattedProperties = data.map((prop) => ({
-        id: prop.id,
-        title: prop.title,
-        address: prop.address,
-        city: prop.city,
-        province: prop.province,
-        postal_code: prop.postal_code,
-        monthly_rent: prop.monthly_rent,
-        bedrooms: prop.bedrooms,
-        bathrooms: prop.bathrooms,
-      })) as Property[];
-
-      setAvailableProperties(formattedProperties);
-    } catch (error) {
-      console.error("Error fetching available properties:", error);
-    }
-  };
-
-  const fetchTenantApplications = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('applications')
-        .select(`
-          id,
-          property_id,
-          created_at,
-          status,
-          email,
-          phone,
-          properties:property_id (title, address)
-        `)
-        .eq('tenant_id', user.id);
-
-      if (error) throw error;
-
-      const formattedApplications = data.map((app) => ({
-        id: app.id,
-        property: app.properties?.title || app.properties?.address || 'Unknown property',
-        property_id: app.property_id,
-        date: app.created_at,
-        status: app.status as 'pending' | 'approved' | 'rejected',
-        email: app.email,
-        phone: app.phone,
-      }));
-
-      setApplications(formattedApplications);
-    } catch (error) {
-      console.error("Error fetching tenant applications:", error);
-    }
-  };
-
-  const fetchTenantLeases = async () => {
+  const fetchTenantLease = async () => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
         .from('leases')
         .select(`
-          id,
-          property_id,
-          tenant_name,
-          monthly_rent,
-          lease_start_date,
-          lease_end_date,
-          status,
-          properties:property_id (title, address)
+          *,
+          property:properties (
+            title,
+            address,
+            city,
+            province
+          ),
+          landlord:profiles!leases_landlord_id_fkey (
+            first_name,
+            last_name,
+            email,
+            phone
+          )
         `)
-        .eq('tenant_id', user.id);
+        .eq('tenant_id', user.id)
+        .eq('status', 'active')
+        .single();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
 
-      const formattedLeases = data.map((lease) => ({
-        id: lease.id,
-        property_title: lease.properties?.title || lease.properties?.address || 'Unknown property',
-        tenant_name: lease.tenant_name,
-        monthly_rent: lease.monthly_rent,
-        lease_start_date: lease.lease_start_date,
-        lease_end_date: lease.lease_end_date,
-        status: lease.status,
-      }));
-
-      setLeases(formattedLeases);
+      setLease(data);
     } catch (error) {
-      console.error("Error fetching tenant leases:", error);
+      console.error('Error fetching lease:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load lease information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -185,6 +119,24 @@ const TenantDashboard = () => {
     }
   };
 
+  const getDaysUntilRentDue = () => {
+    if (!lease) return null;
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const diffTime = nextMonth.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -193,413 +145,325 @@ const TenantDashboard = () => {
     );
   }
 
+  if (!lease) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <Home size={64} className="mx-auto mb-4 text-slate-600" />
+            <h1 className="text-2xl font-bold mb-2">No Active Lease Found</h1>
+            <p className="text-slate-400 mb-6">
+              You don't have an active lease in the system. Please contact your landlord.
+            </p>
+            <Button onClick={handleSignOut} variant="outline">
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white overflow-hidden">
+    <div className="min-h-screen bg-slate-950 text-white">
       {/* Animated Background */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-black" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,213,0,0.05),transparent_50%)]" />
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 animate-fade-up">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
           <div>
-            <h1 className="text-4xl font-black mb-2 bg-gradient-to-r from-white via-yellow-200 to-yellow-400 bg-clip-text text-transparent">
-              Tenant Dashboard
+            <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-white via-yellow-200 to-yellow-400 bg-clip-text text-transparent">
+              My Rental Dashboard
             </h1>
-            <p className="text-slate-300 text-lg">
+            <p className="text-slate-300">
               Welcome back, {profile?.first_name} {profile?.last_name}
             </p>
           </div>
-          <div className="flex gap-2 mt-4 md:mt-0">
-            <Button variant="outline" size="sm" className="flex items-center gap-1 bg-slate-800/50 border-slate-600 text-white hover:bg-yellow-500/10 hover:border-yellow-500/50 hover:text-yellow-400">
-              <Bell size={16} />
-              <span className="hidden sm:inline">Notifications</span>
+          <div className="flex gap-2 mt-4 sm:mt-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-slate-600 text-slate-300 hover:bg-slate-700/50"
+              onClick={() => setActiveTab('settings')}
+            >
+              <Settings size={16} className="mr-1" />
+              Settings
             </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-1 bg-slate-800/50 border-slate-600 text-white hover:bg-yellow-500/10 hover:border-yellow-500/50 hover:text-yellow-400" onClick={() => signOut()}>
-              <User size={16} />
-              <span className="hidden sm:inline">Sign Out</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-slate-600 text-slate-300 hover:bg-slate-700/50"
+              onClick={handleSignOut}
+            >
+              <LogOut size={16} className="mr-1" />
+              Sign Out
             </Button>
           </div>
         </div>
-        
-        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="animate-fade-up" style={{ animationDelay: '0.1s' }}>
-          <TabsList className="grid grid-cols-4 mb-8 bg-slate-800/50 border border-slate-700">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">Overview</TabsTrigger>
-            <TabsTrigger value="properties" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">Browse Properties</TabsTrigger>
-            <TabsTrigger value="applications" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">My Applications</TabsTrigger>
-            <TabsTrigger value="leases" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">My Leases</TabsTrigger>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid grid-cols-2 lg:grid-cols-5 bg-slate-800/50 border border-slate-700">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+              <Home size={16} className="mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="lease" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+              <FileText size={16} className="mr-2" />
+              My Lease
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black relative">
+              <MessageCircle size={16} className="mr-2" />
+              Messages
+              {unreadCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 min-w-[1.25rem] h-5">
+                  {unreadCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+              <FileText size={16} className="mr-2" />
+              Documents
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+              <Settings size={16} className="mr-2" />
+              Settings
+            </TabsTrigger>
           </TabsList>
-          
+
+          {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-400">Available Properties</CardTitle>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="text-2xl font-bold text-white">{availableProperties.length}</div>
-                  <p className="text-xs text-slate-500">Properties available for rent</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-400">My Applications</CardTitle>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="text-2xl font-bold text-white">{applications.length}</div>
-                  <p className="text-xs text-slate-500">
-                    {applications.filter(a => a.status === 'pending').length} pending
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-400">Active Leases</CardTitle>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="text-2xl font-bold text-white">{leases.length}</div>
-                  <p className="text-xs text-slate-500">Current lease agreements</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 border-slate-700/50">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-400">Monthly Rent</CardTitle>
                 </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="text-2xl font-bold text-yellow-400">
-                    ${leases.reduce((total, l) => total + l.monthly_rent, 0).toLocaleString()}
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-400">${lease.monthly_rent}</div>
+                  <p className="text-xs text-slate-500">Due on the 1st</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 border-slate-700/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-400">Days Until Rent Due</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-white">{getDaysUntilRentDue()}</div>
+                  <p className="text-xs text-slate-500">Next payment</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 border-slate-700/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-400">Lease Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                    {lease.status}
+                  </Badge>
+                  <p className="text-xs text-slate-500 mt-1">Current status</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Property Info */}
+            <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 border-slate-700/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Home size={20} className="text-yellow-400" />
+                  My Property
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-white">{lease.property?.title}</h3>
+                  <p className="text-slate-400 flex items-center gap-2">
+                    <MapPin size={16} />
+                    {lease.property?.address}, {lease.property?.city}, {lease.property?.province}
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-slate-400">Lease Term:</span>
+                    <p className="text-white">
+                      {formatDate(lease.lease_start_date)} - {formatDate(lease.lease_end_date)}
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-500">Total monthly</p>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="text-white">Available Properties</CardTitle>
-                  <CardDescription className="text-slate-400">Properties available for rent</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {availableProperties.length > 0 ? (
-                    <div className="divide-y divide-slate-700">
-                      {availableProperties.slice(0, 3).map(property => (
-                        <div key={property.id} className="flex flex-col md:flex-row md:items-center justify-between p-4">
-                          <div className="mb-2 md:mb-0">
-                            <div className="font-medium text-white">{property.title || property.address}</div>
-                            <div className="text-sm text-slate-400">{property.city}, {property.province}</div>
-                            {(property.bedrooms || property.bathrooms) && (
-                              <div className="text-xs text-slate-500">
-                                {property.bedrooms && `${property.bedrooms} bed`}
-                                {property.bedrooms && property.bathrooms && ' • '}
-                                {property.bathrooms && `${property.bathrooms} bath`}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex flex-col md:items-end">
-                            <div className="text-sm text-slate-400 mb-2">
-                              ${property.monthly_rent} /mo
-                            </div>
-                            <Button 
-                              size="sm"
-                              onClick={() => navigate(`/application/${property.id}`)}
-                              className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-semibold"
-                            >
-                              Apply Now
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-6 text-center">
-                      <AlertCircle className="mx-auto h-10 w-10 text-slate-600 mb-2" />
-                      <h3 className="text-white">No Properties Available</h3>
-                      <p className="text-sm text-slate-500">Check back later for new listings.</p>
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter className="border-t border-slate-700 bg-slate-800/30">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full text-yellow-400 hover:bg-yellow-500/10" 
-                    size="sm"
-                    onClick={() => setActiveTab('properties')}
-                  >
-                    Browse All Properties
-                  </Button>
-                </CardFooter>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="text-white">Recent Applications</CardTitle>
-                  <CardDescription className="text-slate-400">Your latest rental applications</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {applications.length > 0 ? (
-                    <div className="divide-y divide-slate-700">
-                      {applications.slice(0, 3).map(application => (
-                        <div key={application.id} className="p-4">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="font-medium text-white">{application.property}</div>
-                            <Badge className={
-                              application.status === 'approved' 
-                                ? 'bg-green-500 hover:bg-green-600' 
-                                : application.status === 'rejected'
-                                ? 'bg-red-500 hover:bg-red-600'
-                                : 'bg-amber-500 hover:bg-amber-600'
-                            }>
-                              {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-slate-400">{formatDate(application.date)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-6 text-center">
-                      <FileText className="mx-auto h-10 w-10 text-slate-600 mb-2" />
-                      <h3 className="text-white">No Applications</h3>
-                      <p className="text-sm text-slate-500">Start by applying for a property.</p>
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter className="border-t border-slate-700 bg-slate-800/30">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full text-yellow-400 hover:bg-yellow-500/10" 
-                    size="sm"
-                    onClick={() => setActiveTab('applications')}
-                  >
-                    View All Applications
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300 hover:scale-105">
-                <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-lg text-white">Find Properties</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center pb-2">
-                  <Home className="mx-auto text-yellow-400" size={32} />
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    onClick={() => setActiveTab('properties')}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-semibold"
-                  >
-                    Browse Listings
-                  </Button>
-                </CardFooter>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300 hover:scale-105">
-                <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-lg text-white">View Applications</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center pb-2">
-                  <FileText className="mx-auto text-yellow-400" size={32} />
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    onClick={() => setActiveTab('applications')}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-semibold"
-                  >
-                    My Applications
-                  </Button>
-                </CardFooter>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300 hover:scale-105">
-                <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-lg text-white">My Account</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center pb-2">
-                  <User className="mx-auto text-yellow-400" size={32} />
-                </CardContent>
-                <CardFooter>
-                  <AccountManagement />
-                </CardFooter>
-              </Card>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="properties" className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-white">Available Properties</h2>
-            </div>
-            
-            {availableProperties.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {availableProperties.map(property => (
-                  <Card key={property.id} className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300 hover:scale-105">
-                    <CardHeader>
-                      <CardTitle className="text-white">{property.title || property.address}</CardTitle>
-                      <CardDescription className="text-slate-400">{property.city}, {property.province}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {(property.bedrooms || property.bathrooms) && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Details:</span>
-                            <span className="text-slate-300">
-                              {property.bedrooms && `${property.bedrooms} bed`}
-                              {property.bedrooms && property.bathrooms && ' • '}
-                              {property.bathrooms && `${property.bathrooms} bath`}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Monthly Rent:</span>
-                          <span className="font-medium text-yellow-400">${property.monthly_rent} CAD</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between border-t border-slate-700 pt-4">
-                      <Button variant="outline" size="sm" className="bg-slate-800/50 border-slate-600 text-white hover:bg-yellow-500/10 hover:border-yellow-500/50">View Details</Button>
-                      <Button 
-                        size="sm"
-                        onClick={() => navigate(`/application/${property.id}`)}
-                        className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-semibold"
-                      >
-                        Apply Now
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm rounded-lg border border-slate-700/50">
-                <div className="text-slate-600 mb-2">
-                  <Home size={40} className="mx-auto" />
+                  <div>
+                    <span className="text-slate-400">Security Deposit:</span>
+                    <p className="text-white">${lease.security_deposit}</p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-medium mb-1 text-white">No Properties Available</h3>
-                <p className="text-slate-500 mb-4">Check back later for new listings.</p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="applications" className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-white">My Applications</h2>
-            </div>
-            
-            {applications.length > 0 ? (
-              <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm rounded-lg border border-slate-700/50 shadow-lg">
-                <div className="hidden md:grid md:grid-cols-4 gap-4 p-4 border-b border-slate-700 text-sm font-medium text-slate-400">
-                  <div>Property</div>
-                  <div>Date Applied</div>
-                  <div>Status</div>
-                  <div>Actions</div>
+
+                {lease.utilities_included && lease.utilities_included.length > 0 && (
+                  <div>
+                    <span className="text-slate-400">Utilities Included:</span>
+                    <p className="text-white">{lease.utilities_included.join(', ')}</p>
+                  </div>
+                )}
+
+                {lease.snow_grass_responsibility && (
+                  <div>
+                    <span className="text-slate-400">Responsibilities:</span>
+                    <p className="text-white">{lease.snow_grass_responsibility}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Landlord Contact */}
+            <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 border-slate-700/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Phone size={20} className="text-yellow-400" />
+                  Landlord Contact
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <span className="text-slate-400">Name:</span>
+                  <p className="text-white">
+                    {lease.landlord?.first_name} {lease.landlord?.last_name}
+                  </p>
                 </div>
-                <div className="divide-y divide-slate-700">
-                  {applications.map(application => (
-                    <div key={application.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 hover:bg-slate-700/30">
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-slate-500 mb-1">Property</div>
-                        <div className="font-medium text-white">{application.property}</div>
-                      </div>
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-slate-500 mb-1">Date Applied</div>
-                        <div className="text-slate-300">{formatDate(application.date)}</div>
-                      </div>
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-slate-500 mb-1">Status</div>
-                        <Badge className={
-                          application.status === 'approved' 
-                            ? 'bg-green-500 hover:bg-green-600' 
-                            : application.status === 'rejected'
-                            ? 'bg-red-500 hover:bg-red-600'
-                            : 'bg-amber-500 hover:bg-amber-600'
-                        }>
-                          {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
-                        </Badge>
-                      </div>
-                      <div>
-                        <div className="md:hidden text-sm font-medium text-slate-500 mb-1">Actions</div>
-                        <Button variant="outline" size="sm" className="bg-slate-800/50 border-slate-600 text-white hover:bg-yellow-500/10 hover:border-yellow-500/50">
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                <div>
+                  <span className="text-slate-400">Email:</span>
+                  <p className="text-white">{lease.landlord?.email}</p>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm rounded-lg border border-slate-700/50">
-                <div className="text-slate-600 mb-2">
-                  <FileText size={40} className="mx-auto" />
-                </div>
-                <h3 className="text-lg font-medium mb-1 text-white">No Applications Found</h3>
-                <p className="text-slate-500 mb-4">Start by applying for a property</p>
+                {lease.landlord?.phone && (
+                  <div>
+                    <span className="text-slate-400">Phone:</span>
+                    <p className="text-white">{lease.landlord?.phone}</p>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter>
                 <Button 
-                  onClick={() => setActiveTab('properties')}
-                  className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-semibold"
+                  onClick={() => setActiveTab('messages')}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-black"
                 >
-                  Browse Properties
+                  <MessageCircle size={16} className="mr-2" />
+                  Send Message
                 </Button>
-              </div>
-            )}
+              </CardFooter>
+            </Card>
           </TabsContent>
-          
-          <TabsContent value="leases" className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-white">My Leases</h2>
-            </div>
-            
-            {leases.length > 0 ? (
-              <div className="grid grid-cols-1 gap-6">
-                {leases.map(lease => (
-                  <Card key={lease.id} className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300">
-                    <CardHeader>
-                      <CardTitle className="text-white">{lease.property_title}</CardTitle>
-                      <CardDescription className="text-slate-400">Lease Agreement</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <div className="text-sm text-slate-400">Monthly Rent</div>
-                          <div className="font-medium text-yellow-400">${lease.monthly_rent}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-slate-400">Lease Start</div>
-                          <div className="font-medium text-slate-300">{formatDate(lease.lease_start_date)}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-slate-400">Lease End</div>
-                          <div className="font-medium text-slate-300">{formatDate(lease.lease_end_date)}</div>
-                        </div>
+
+          {/* Lease Details Tab */}
+          <TabsContent value="lease" className="space-y-6">
+            <Card className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 border-slate-700/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <FileText size={20} className="text-yellow-400" />
+                  Lease Agreement Details
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Complete information about your rental agreement
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-slate-400">Property Address</label>
+                      <p className="text-white">
+                        {lease.property?.title}<br />
+                        {lease.property?.address}<br />
+                        {lease.property?.city}, {lease.property?.province}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-slate-400">Lease Term</label>
+                      <p className="text-white">
+                        {formatDate(lease.lease_start_date)} to {formatDate(lease.lease_end_date)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-slate-400">Monthly Rent</label>
+                      <p className="text-white text-lg font-semibold">${lease.monthly_rent}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-slate-400">Security Deposit</label>
+                      <p className="text-white">${lease.security_deposit}</p>
+                    </div>
+
+                    {lease.pet_deposit > 0 && (
+                      <div>
+                        <label className="text-sm font-medium text-slate-400">Pet Deposit</label>
+                        <p className="text-white">${lease.pet_deposit}</p>
                       </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between border-t border-slate-700 pt-4">
-                      <Badge variant="outline" className="capitalize border-slate-600 text-slate-300">
+                    )}
+
+                    <div>
+                      <label className="text-sm font-medium text-slate-400">Status</label>
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
                         {lease.status}
                       </Badge>
-                      <Button variant="outline" size="sm" className="bg-slate-800/50 border-slate-600 text-white hover:bg-yellow-500/10 hover:border-yellow-500/50">
-                        Download Lease
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-gradient-to-br from-slate-800/60 to-slate-900/80 backdrop-blur-sm rounded-lg border border-slate-700/50">
-                <div className="text-slate-600 mb-2">
-                  <FileText size={40} className="mx-auto" />
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-lg font-medium mb-1 text-white">No Leases Found</h3>
-                <p className="text-slate-500 mb-4">You don't have any active leases.</p>
-              </div>
-            )}
+
+                {lease.utilities_included && lease.utilities_included.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-400">Utilities Included</label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {lease.utilities_included.map((utility, index) => (
+                        <Badge key={index} variant="outline" className="border-slate-600 text-slate-300">
+                          {utility}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {lease.snow_grass_responsibility && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-400">Maintenance Responsibilities</label>
+                    <p className="text-white">{lease.snow_grass_responsibility}</p>
+                  </div>
+                )}
+
+                {lease.special_terms && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-400">Special Terms</label>
+                    <p className="text-white">{lease.special_terms}</p>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700/50">
+                  <Download size={16} className="mr-2" />
+                  Download Lease Document
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          {/* Messages Tab */}
+          <TabsContent value="messages">
+            <LeaseMessaging lease={lease} isLandlord={false} />
+          </TabsContent>
+
+          {/* Documents Tab */}
+          <TabsContent value="documents">
+            <TenantDocuments />
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings">
+            <TenantSettings />
           </TabsContent>
         </Tabs>
       </div>
