@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,11 +17,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { documentService, Document, DocumentCategory } from '@/services/documentService';
+import { documentService, Document as DocumentType, DocumentCategory } from '@/services/documentService';
 
 const TenantDocuments = () => {
   const { user } = useAuth();
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -77,19 +76,19 @@ const TenantDocuments = () => {
 
     setIsUploading(true);
     try {
-      const document = await documentService.uploadDocument(
+      const documentResult = await documentService.uploadDocument(
         selectedFile,
         selectedCategory
       );
 
-      if (document) {
-        setDocuments(prev => [document, ...prev]);
+      if (documentResult) {
+        setDocuments(prev => [documentResult, ...prev]);
         setSelectedFile(null);
         setSelectedCategory('other');
         fetchStorageUsage();
         
-        // Reset file input
-        const fileInput = document.getElementById('file-input') as HTMLInputElement;
+        // Reset file input - using globalThis to access the DOM document
+        const fileInput = globalThis.document.getElementById('file-input') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
       }
     } catch (error) {
@@ -99,7 +98,7 @@ const TenantDocuments = () => {
     }
   };
 
-  const handleDownload = async (document: Document) => {
+  const handleDownload = async (document: DocumentType) => {
     try {
       const url = await documentService.getDocumentUrl(document.file_path);
       if (url) {
@@ -121,7 +120,7 @@ const TenantDocuments = () => {
     }
   };
 
-  const handleDelete = async (document: Document) => {
+  const handleDelete = async (document: DocumentType) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
       const success = await documentService.deleteDocument(document.id);
       if (success) {
