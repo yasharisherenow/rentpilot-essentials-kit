@@ -71,19 +71,6 @@ If extended, RentPilot could integrate with:
 * **Tenant screening systems**
 * **Cloud storage & sharing** for leases
 
----
-
-## Screenshots / Demo
-
-> Replace the placeholders below with actual screenshots or GIFs.
-
-### Form UI
-
-![Form UI Screenshot](docs/screenshots/form-ui.png)
-
-### Generated Lease PDF
-
-![Lease PDF Screenshot](docs/screenshots/lease-pdf.png)
 
 ---
 
