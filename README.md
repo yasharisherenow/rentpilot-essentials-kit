@@ -78,6 +78,3 @@ If extended, RentPilot could integrate with:
 
 MIT License
 
-
-```
-
