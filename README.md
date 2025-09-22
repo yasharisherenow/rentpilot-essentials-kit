@@ -1,4 +1,3 @@
-
 # RentPilot
 
 RentPilot is a prototype SaaS project for **lease automation**. It demonstrates how landlords and property managers can streamline rental agreements by auto-filling lease templates and organizing tenant workflows.
@@ -13,20 +12,39 @@ RentPilot is a prototype SaaS project for **lease automation**. It demonstrates 
 
 ---
 
+## Screenshots
+
+### Login & Onboarding
+![Dashboard Login](./Dashboard%20login.png)
+
+### Landing Page
+![Main Page](./main%20page.png)
+
+### Pricing Plans
+![Pricing](./pricing.png)
+
+### Privacy Policy
+![Privacy Policy](./privacy%20policy.png)
+
+### Terms of Service
+![Terms of Service](./terms%20of%20services.png)
+
+---
+
 ## Tech Stack
 - **Frontend**: React + TailwindCSS  
 - **Backend**: Node.js  
-- **PDF Processing**: [PDF-Lib](https://pdf-lib.js.org/)  
-
+- **PDF Processing**: [PDF-Lib](https://pdf-lib.js.org/)
+- **DateBase**: SQL
+   
 ---
 
 ## Setup & Usage
 
 ### 1. Clone the repo
-```bash
-git clone https://github.com/yourusername/rentpilot.git
-cd rentpilot
-````
+
+git clone (https://github.com/yasharisherenow/rentpilot-essentials-kit)
+cd rentpilot-essentials-kit
 
 ### 2. Install dependencies
 
@@ -52,6 +70,8 @@ npm run dev
 
 ---
 
+---
+
 ## Project Status
 
 RentPilot is a **proof of concept** and is no longer actively developed.
@@ -67,10 +87,9 @@ It remains available as a portfolio project to demonstrate:
 
 If extended, RentPilot could integrate with:
 
-* **E-signature APIs** (e.g., DocuSign, HelloSign)
+* **E-signature APIs** (DocuSign, HelloSign)
 * **Tenant screening systems**
 * **Cloud storage & sharing** for leases
-
 
 ---
 
@@ -78,3 +97,4 @@ If extended, RentPilot could integrate with:
 
 MIT License
 
+```
