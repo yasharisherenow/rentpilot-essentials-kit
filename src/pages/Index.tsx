@@ -72,14 +72,12 @@ const Index = () => {
 
         <div className="relative z-10 container mx-auto px-4 text-center">
           <div className="max-w-5xl mx-auto">
-            <h1 className="text-6xl md:text-8xl lg:text-9xl font-black mb-8 leading-tight">
-              <span className="block bg-gradient-to-r from-white via-yellow-200 to-yellow-400 bg-clip-text text-transparent drop-shadow-2xl">
-                Built for Landlords.
-              </span>
-              <span className="block bg-gradient-to-r from-yellow-400 via-yellow-300 to-white bg-clip-text text-transparent drop-shadow-2xl mt-4">
-                Designed to Feel Like Magic.
-              </span>
-            </h1>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight">
+          <span className="block bg-gradient-to-r from-yellow-400 via-yellow-300 to-white bg-clip-text text-transparent drop-shadow-2xl">
+             Your lease, on autopilot.
+            </span>
+          </h1>
+
             
             <p className="text-xl md:text-2xl text-slate-300 mb-12 max-w-3xl mx-auto leading-relaxed font-medium">
               Manage leases, tenants, and documents — without spreadsheets.
