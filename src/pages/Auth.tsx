@@ -1,5 +1,5 @@
-
 import { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,34 +7,98 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Eye, EyeOff } from 'lucide-react'; // Add this import for icons
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
+// Update signupSchema to include confirmPassword and match check
 const signupSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  confirmPassword: z.string().min(6, { message: 'Please confirm your password' }),
   firstName: z.string().min(1, { message: 'First name is required' }),
   lastName: z.string().min(1, { message: 'Last name is required' }),
   role: z.enum(['landlord', 'tenant'], { 
     required_error: 'Please select a role',
   }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type SignupFormData = z.infer<typeof signupSchema>;
 
+const PasswordStrength: React.FC<{ password: string }> = ({ password }) => {
+  const getStrength = () => {
+    let score = 0;
+    if (!password) return score;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    return score;
+  };
+
+  const strength = getStrength();
+  const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 'bg-emerald-500'];
+  const labels = ['Very Weak', 'Weak', 'Medium', 'Strong', 'Very Strong'];
+
+  return (
+    <div className="mt-2">
+      <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
+        <div
+          className={`h-full ${colors[strength]} transition-all duration-300`}
+          style={{ width: `${(strength / 4) * 100}%` }}
+        />
+      </div>
+      <p className={`text-xs mt-1 ${colors[strength].replace('bg-', 'text-')}`}>
+        {password && labels[strength]}
+      </p>
+    </div>
+  );
+};
+
+const PasswordRequirements: React.FC<{ password: string }> = ({ password }) => {
+  const requirements = [
+    { label: 'At least 8 characters', test: (pw: string) => pw.length >= 8 },
+    { label: 'One uppercase letter', test: (pw: string) => /[A-Z]/.test(pw) },
+    { label: 'One number', test: (pw: string) => /[0-9]/.test(pw) },
+    { label: 'One special character', test: (pw: string) => /[^A-Za-z0-9]/.test(pw) },
+  ];
+
+  return (
+    <ul className="mt-2 mb-1 text-xs space-y-1">
+      {requirements.map((req, idx) => (
+        <li key={idx} className="flex items-center gap-2">
+          <span className={req.test(password) ? "text-green-400" : "text-slate-400"}>
+            {req.test(password) ? "✔" : "✖"}
+          </span>
+          <span className={req.test(password) ? "text-green-400" : "text-slate-400"}>
+            {req.label}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
 const Auth = () => {
   const [activeTab, setActiveTab] = useState('login');
   const { signIn, signUp } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [signupError, setSignupError] = useState<string | null>(null); // Add this state
+  const navigate = useNavigate(); // Add this line
+  const [signupSuccess, setSignupSuccess] = useState(false); // Add this state
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -49,6 +113,7 @@ const Auth = () => {
     defaultValues: {
       email: '',
       password: '',
+      confirmPassword: '',
       firstName: '',
       lastName: '',
       role: 'tenant',
@@ -68,14 +133,24 @@ const Auth = () => {
 
   const handleSignup = async (data: SignupFormData) => {
     setIsSubmitting(true);
+    setSignupError(null);
+    setSignupSuccess(false);
     try {
       await signUp(data.email, data.password, {
         first_name: data.firstName,
         last_name: data.lastName,
         role: data.role,
       });
-    } catch (error) {
-      console.error(error);
+      setSignupSuccess(true);
+      setTimeout(() => {
+        navigate('/dashboard'); // Redirect after 2 seconds (change path as needed)
+      }, 2000);
+    } catch (error: any) {
+      if (error?.message) {
+        setSignupError(error.message);
+      } else {
+        setSignupError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -236,12 +311,54 @@ const Auth = () => {
                         <FormItem>
                           <FormLabel className="text-slate-300 font-medium">Password</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="••••••••" 
-                              type="password" 
-                              className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400/20 focus:ring-2 transition-all duration-200"
-                              {...field} 
-                            />
+                            <div className="relative">
+                              <Input 
+                                placeholder="••••••••" 
+                                type={showSignupPassword ? "text" : "password"}
+                                className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400/20 focus:ring-2 transition-all duration-200 pr-10"
+                                {...field} 
+                              />
+                              <button
+                                type="button"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-yellow-400"
+                                onClick={() => setShowSignupPassword((v) => !v)}
+                                tabIndex={-1}
+                              >
+                                {showSignupPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                              </button>
+                            </div>
+                          </FormControl>
+                          <PasswordRequirements password={field.value} />
+                          <PasswordStrength password={field.value} />
+                          <FormMessage className="text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {/* In the signup form, add the Confirm Password field after the Password field */}
+                    <FormField
+                      control={signupForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300 font-medium">Confirm Password</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                placeholder="••••••••"
+                                type={showSignupPassword ? "text" : "password"}
+                                className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400/20 focus:ring-2 transition-all duration-200 pr-10"
+                                {...field}
+                              />
+                              <button
+                                type="button"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-yellow-400"
+                                onClick={() => setShowSignupPassword((v) => !v)}
+                                tabIndex={-1}
+                              >
+                                {showSignupPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                              </button>
+                            </div>
                           </FormControl>
                           <FormMessage className="text-red-400" />
                         </FormItem>
@@ -282,6 +399,17 @@ const Auth = () => {
                         </FormItem>
                       )}
                     />
+                    
+                    {signupSuccess && (
+                      <div className="text-green-400 text-sm text-center mb-2">
+                        Account created successfully! Redirecting...
+                      </div>
+                    )}
+                    {signupError && (
+                      <div className="text-red-400 text-sm text-center mb-2">
+                        {signupError}
+                      </div>
+                    )}
                     
                     <Button 
                       type="submit" 
