@@ -105,6 +105,10 @@ const AddPropertyWizard = ({ onPropertyAdded, onClose }: AddPropertyWizardProps)
       const fileExt = photo.name.split('.').pop();
       const fileName = `${user!.id}/${propertyId}/${Date.now()}.${fileExt}`;
       
+      if (fileName.includes('..')) {
+        throw new Error('Invalid file name');
+      }
+      
       const { error } = await supabase.storage
         .from('property-photos')
         .upload(fileName, photo);
