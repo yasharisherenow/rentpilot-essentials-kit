@@ -31,6 +31,8 @@ export const documentService = {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
+      if (filePath.includes('..')) throw new Error('Invalid file path');
+
       // Upload file to storage
       const { error: uploadError } = await supabase.storage
         .from('documents')
@@ -125,6 +127,7 @@ export const documentService = {
       if (fetchError) throw fetchError;
 
       // Delete from storage
+      if (document.file_path.includes('..')) throw new Error('Invalid file path');
       const { error: storageError } = await supabase.storage
         .from('documents')
         .remove([document.file_path]);
@@ -158,6 +161,9 @@ export const documentService = {
 
   async getDocumentUrl(filePath: string): Promise<string | null> {
     try {
+      if (filePath.includes('..')) {
+        throw new Error('Invalid file path');
+      }
       const { data } = await supabase.storage
         .from('documents')
         .createSignedUrl(filePath, 3600); // 1 hour expiry
